@@ -116,41 +116,19 @@ button:hover {
 }
 
 .message {
-  margin-bottom: var(--default-spacing);
+  white-space: pre-wrap;
+  margin-bottom: calc(var(--default-spacing) * 2);
+  border-top: 1px dashed black;
 }
 
-.message.user {
-  padding: var(--small-spacing);
-  background-color: hsl(182, 25%, 75%);
-  white-space: pre;
-  border-radius: 3px;
+.message:first-child {
+  border-top: 0;
 }
 
-.message.user::before {
-  display: block;
-  content: "Workflow input context: ";
-}
-
-.message-step {
-  position: relative;
-  background: rgba(0, 0, 0, 0.1);
-  margin-bottom: var(--default-spacing);
-  border-radius: 3px;
-  padding: var(--small-spacing);
-  padding-left: 25px;
-}
-
-.message-step::before {
-  content: "→";
-  position: absolute;
-  top: 5px;
-  left: 5px;
-  top: 4px;
-  left: 8px;
-}
-
-.message-result {
-  margin-bottom: var(--default-spacing);
+.message .label {
+  display: inline-block;
+  font-size: 10px;
+  padding: 20px 0 3px 0;
 }
 
 .loader::after {

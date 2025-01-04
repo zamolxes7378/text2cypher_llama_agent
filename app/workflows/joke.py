@@ -1,4 +1,7 @@
 import os
+import asyncio
+from uuid import uuid4
+from pydantic import UUID4, Field
 from llama_index.llms.openai import OpenAI
 from llama_index.core.workflow import (
     Event,
@@ -10,8 +13,12 @@ from llama_index.core.workflow import (
 )
 
 class JokeEvent(Event):
+    uuid: UUID4 = Field(default_factory=uuid4)
     result: str
 
+class CritiqueEvent(Event):
+    uuid: UUID4 = Field(default_factory=uuid4)
+    result: str
 
 class JokeWorkflow(Workflow):
     llm = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
@@ -39,12 +46,16 @@ class JokeWorkflow(Workflow):
         if not joke:
             raise ValueError(f"critique_joke is missing joke.")
 
-        prompt = f"Give a 5 word analysis and critique of the following joke: {joke}"
-        response = await self.llm.acomplete(prompt)
+        prompt = f"Give a 1 sentence analysis and critique of the following joke: {joke}"
 
-        # Emit the critique event - not needed if this is last step
-        stop_event = StopEvent(result=str(response))
-        ctx.write_event_to_stream(stop_event)
+        gen = await self.llm.astream_complete(prompt)
+        critique_event = CritiqueEvent(result="")
+        async for response in gen:
+            critique_event.result = response.delta
+            ctx.write_event_to_stream(critique_event)
+            await asyncio.sleep(0.05)
+
+        stop_event = StopEvent(result="Workflow completed.")
 
         # Return the final result
         return stop_event

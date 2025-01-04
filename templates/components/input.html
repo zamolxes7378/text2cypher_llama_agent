@@ -31,10 +31,10 @@
       // Prepare form data
       const formData = new FormData(form);
 
-      const userMessage = createDivElement(
-        "message user",
-        formData.get("context")
-      );
+      const userMessage = createDivElement("message user");
+      userMessage.innerHTML = `<span class="label">Workflow input context:</span><br />`;
+      userMessage.innerHTML += formData.get("context");
+
       const loader = createDivElement("loader", "");
 
       outputDiv.append(userMessage);
@@ -62,11 +62,10 @@
       // Read and process the streaming response
       const reader = response.body.getReader();
       const decoder = new TextDecoder();
-      let done = false;
-      let content = "";
-      const aiMessage = createDivElement(content);
 
-      outputDiv.insertBefore(aiMessage, loader);
+      let done = false;
+      let message = null;
+      let lastEventUuid = "";
 
       while (!done) {
         const { value, done: doneReading } = await reader.read();
@@ -76,27 +75,42 @@
         if (done) {
           break;
         }
-
+        // parse SSE data
         const chunk = decoder.decode(value || new Uint8Array(), {
           stream: !done,
         });
         const data = JSON.parse(chunk.replace("data: ", ""));
 
+        // render messages
+
+        //console.log("data.uuid", data.uuid, "lastEventUuid", lastEventUuid);
+        console.log(data);
         if (data.event_type) {
-          // we are rendering intermediate steps
-          const aiMessageType = createDivElement("message-step", "");
-          outputDiv.insertBefore(aiMessageType, loader);
-          aiMessageType.textContent += `${data.event_type}: ${data.message}\n\n`;
+          // handle intermediate event steps message
+          if (lastEventUuid !== data.uuid) {
+            console.log("Createing new event message ...");
+            message = createDivElement();
+            message.classList = "message step";
+            message.innerHTML = `<span class="label">${data.event_type}:</span><br />`;
+            outputDiv.insertBefore(message, loader);
+          }
+          message.innerHTML += data.result;
         } else {
-          // we have result we are done
-          const aiMessageResult = createDivElement(
-            "message-result",
-            "Result: "
-          );
-          outputDiv.insertBefore(aiMessageResult, loader);
-          aiMessageResult.textContent += data.message;
+          // handle final result message
+          if (lastEventUuid !== data.uuid) {
+            console.log("Createing final result ...");
+            message = createDivElement();
+            message.classList = "message result";
+            message.innerHTML = `<span class="label">Result:</span><br />`;
+            outputDiv.insertBefore(message, loader);
+          }
+          message.innerHTML += data.result;
+
           loader.remove();
         }
+
+        // store last event uuid
+        lastEventUuid = data.uuid;
 
         // scroll to bottom on every chunk response
         outputDiv.parentElement.scrollTo(

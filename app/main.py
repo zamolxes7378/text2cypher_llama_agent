@@ -18,7 +18,7 @@ templates = Jinja2Templates(directory="templates")
 @app.get("/", response_class=HTMLResponse)
 async def get_index(request: Request):
     workflows = list(WORKFLOW_MAP.keys())
-    print("workflows", workflows)
+
     return templates.TemplateResponse(
         request=request,
         name="pages/index.html",
