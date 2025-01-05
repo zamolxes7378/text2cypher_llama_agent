@@ -69,7 +69,6 @@ class IterativePlanningFlow(Workflow):
 
     @step
     async def initial_plan(self, ctx: Context, ev: InitialPlan) -> GenerateCypher:
-        ctx.write_event_to_stream(StringEvent(result="Initial planning phase", label="Planning"))
         original_question = ev.question
         # store in global context 
         initial_plan_output = await initial_plan_step(original_question)
@@ -109,7 +108,6 @@ class IterativePlanningFlow(Workflow):
 
     @step(num_workers=4)
     async def correct_cypher_step(self, ctx: Context, ev: CorrectCypher) -> ValidateCypher:
-        print("Running validate_cypher ", ev)
         results = await correct_cypher_step(ev.subquery, ev.cypher, ev.errors)
         return ValidateCypher(subquery=ev.subquery, generated_cypher=results)
     
@@ -120,6 +118,7 @@ class IterativePlanningFlow(Workflow):
             database_output = graph_store.structured_query(ev.validated_cypher)
         except Exception as e: # Dividing by zero, etc... or timeout
             database_output = str(e)
+            
         return InformationCheck(subquery=ev.subquery, cypher=ev.validated_cypher, database_output=database_output)
 
     @step
@@ -147,11 +146,12 @@ class IterativePlanningFlow(Workflow):
 
         # Do the information check
         
-        data = information_check_step(result, original_question, dynamic_notebook, plan)
+        data = await information_check_step(result, original_question, dynamic_notebook, plan)
         # Get count of information checks done
         information_checks = await ctx.get("information_checks")
         # Go fetch additional information if needed
         if data.get("modified_plan") and information_checks < MAX_INFORMATION_CHECKS:
+            ctx.write_event_to_stream(StringEvent(result=f"Modified plan: {data.get("modified_plan")}", label="Modified plan"))
             await ctx.set("count_of_subqueries", len(data['modified_plan'][0])) # this is used for ctx.collect()
             await ctx.set("dynamic_notebook", data["dynamic_notebook"])
             await ctx.set("plan", data.get("modified_plan")[1:])

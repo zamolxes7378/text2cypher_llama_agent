@@ -1,6 +1,5 @@
 from llama_index.core.schema import TextNode
 from llama_index.core import VectorStoreIndex
-from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.core import ChatPromptTemplate
 
 from app.workflows.utils import llm, graph_store, embed_model
