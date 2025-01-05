@@ -115,7 +115,7 @@ class IterativePlanningFlow(Workflow):
     async def execute_cypher_step(self, ctx: Context, ev: ExecuteCypher) -> InformationCheck:
         ctx.write_event_to_stream(StringEvent(result=f"Executing Cypher query: {ev.validated_cypher}", label="Cypher Execution"))
         try:
-            database_output = graph_store.structured_query(ev.validated_cypher)
+            database_output = graph_store.structured_query(ev.validated_cypher)[:100] # Hard limit of 100 results
         except Exception as e: # Dividing by zero, etc... or timeout
             database_output = str(e)
             
