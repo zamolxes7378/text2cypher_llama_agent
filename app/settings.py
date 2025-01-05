@@ -1,5 +1,7 @@
 from app.workflows.joke import JokeWorkflow
+from app.workflows.iterative_planner import IterativePlanningFlow
 
 WORKFLOW_MAP = {
-    'joke': JokeWorkflow
+    'iterative_planning': IterativePlanningFlow,
+    'joke': JokeWorkflow,
 }
