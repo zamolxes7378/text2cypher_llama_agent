@@ -247,6 +247,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "asyncio" },
     { name = "fastapi", extra = ["standard"] },
+    { name = "jinja-markdown" },
     { name = "llama-index-embeddings-openai" },
     { name = "llama-index-graph-stores-neo4j" },
     { name = "llama-index-llms-gemini" },
@@ -260,6 +261,7 @@ dependencies = [
 requires-dist = [
     { name = "asyncio", specifier = ">=3.4.3" },
     { name = "fastapi", extras = ["standard"], specifier = ">=0.115.6" },
+    { name = "jinja-markdown", specifier = ">=1.210911" },
     { name = "llama-index-embeddings-openai", specifier = ">=0.3.1" },
     { name = "llama-index-graph-stores-neo4j", specifier = ">=0.4.4" },
     { name = "llama-index-llms-gemini", specifier = ">=0.4.2" },
@@ -646,6 +648,20 @@ wheels = [
 ]
 
 [[package]]
+name = "jinja-markdown"
+version = "1.210911"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "jinja2" },
+    { name = "pygments" },
+    { name = "pymdown-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a9/0a/04036727c369c5013f6780ef8c9207b064ee2f183384893ad54ce93ab27c/jinja_markdown-1.210911.tar.gz", hash = "sha256:f598a58da9b9ced4956c6e113ba4369e9683bac5065bfdef2566bd6de9983eb0", size = 3648 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/10/a4/9d42465c2e6dc24a4d13dede260f13f78d96b7982020491e91272798dffb/jinja_markdown-1.210911-py3-none-any.whl", hash = "sha256:cce8e2be016227c925a8c82a7f3499099319d239fedc481b7728a7c9e9e3cfcc", size = 3415 },
+]
+
+[[package]]
 name = "jinja2"
 version = "3.1.5"
 source = { registry = "https://pypi.org/simple" }
@@ -785,6 +801,15 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/37/f2/4f78b82d93613310800dafb1ff5adf9901f18838eda7375cb07053463ced/llama_index_llms_openai-0.3.12.tar.gz", hash = "sha256:1880273a7e409c05f1dbccdbac5ce3c214771901cd3696aeb556a29dfed8477a", size = 14298 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/d4/84/4678cfbd2e3f8460823c2f6108a7a93312a8288ce328b262a49f327df133/llama_index_llms_openai-0.3.12-py3-none-any.whl", hash = "sha256:08be76b9e649f6085e93292504074728a6531eb7f8930eaf40a2fce70a9f59df", size = 14541 },
+]
+
+[[package]]
+name = "markdown"
+version = "3.7"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/54/28/3af612670f82f4c056911fbbbb42760255801b3068c48de792d354ff4472/markdown-3.7.tar.gz", hash = "sha256:2ae2471477cfd02dbbf038d5d9bc226d40def84b4fe2986e49b59b6b472bbed2", size = 357086 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/3f/08/83871f3c50fc983b88547c196d11cf8c3340e37c32d2e9d6152abe2c61f7/Markdown-3.7-py3-none-any.whl", hash = "sha256:7eb6df5690b81a1d7942992c97fad2938e956e79df20cbc6186e9c3a77b1c803", size = 106349 },
 ]
 
 [[package]]
@@ -1204,6 +1229,19 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/8e/62/8336eff65bcbc8e4cb5d05b55faf041285951b6e80f33e2bff2024788f31/pygments-2.18.0.tar.gz", hash = "sha256:786ff802f32e91311bff3889f6e9a86e81505fe99f2735bb6d60ae0c5004f199", size = 4891905 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f7/3f/01c8b82017c199075f8f788d0d906b9ffbbc5a47dc9918a945e13d5a2bda/pygments-2.18.0-py3-none-any.whl", hash = "sha256:b8e6aca0523f3ab76fee51799c488e38782ac06eafcf95e7ba832985c8e7b13a", size = 1205513 },
+]
+
+[[package]]
+name = "pymdown-extensions"
+version = "10.13"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "markdown" },
+    { name = "pyyaml" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/49/87/4998d1aac5afea5b081238a609d9814f4c33cd5c7123503276d1105fb6a9/pymdown_extensions-10.13.tar.gz", hash = "sha256:e0b351494dc0d8d14a1f52b39b1499a00ef1566b4ba23dc74f1eba75c736f5dd", size = 843302 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/7f/46c7122186759350cf523c71d29712be534f769f073a1d980ce8f095072c/pymdown_extensions-10.13-py3-none-any.whl", hash = "sha256:80bc33d715eec68e683e04298946d47d78c7739e79d808203df278ee8ef89428", size = 264108 },
 ]
 
 [[package]]

@@ -66,11 +66,11 @@ query_decompose_msgs = [
 
 subquery_template = ChatPromptTemplate.from_messages(query_decompose_msgs)
 
-def initial_plan_step(question):
-    queries_output = (
+async def initial_plan_step(question):
+    queries_output = await (
         llm.as_structured_llm(SubqueriesOutput)
-        .complete(subquery_template.format(question=question))
-        .raw
-    ).plan
-    return {"next_event": "generate_cypher", "arguments": {"plan": queries_output, "question": question}}
+        .acomplete(subquery_template.format(question=question))
+        
+    )
+    return {"next_event": "generate_cypher", "arguments": {"plan": queries_output.raw.plan, "question": question}}
 

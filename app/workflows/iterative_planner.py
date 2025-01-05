@@ -72,7 +72,7 @@ class IterativePlanningFlow(Workflow):
         ctx.write_event_to_stream(StringEvent(result="Initial planning phase", label="Planning"))
         original_question = ev.question
         # store in global context 
-        initial_plan_output = initial_plan_step(original_question)
+        initial_plan_output = await initial_plan_step(original_question)
         subqueries = initial_plan_output["arguments"].get("plan")
         
         ctx.write_event_to_stream(StringEvent(result=f"Plan:{subqueries}", label="Planning"))
