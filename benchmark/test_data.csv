@@ -55,17 +55,63 @@ List the top 3 directors by the number of movies directed.;MATCH (d:Director)-[:
 What are the top 5 movies with the highest number of countries involved?;MATCH (m:Movie) WITH m, size(m.countries) AS countryCount ORDER BY countryCount DESC LIMIT 5 RETURN m.title AS title, countryCount
 List the top 5 actors by number of different genres they've acted in.;MATCH (a:Actor)-[:ACTED_IN]->(m:Movie)-[:IN_GENRE]->(g:Genre) WITH a, count(distinct g) AS genreCount ORDER BY genreCount DESC LIMIT 5 RETURN a.name AS actor, genreCount AS numberOfGenres
 List movies directed by ‘Quentin Tarantino'.;MATCH (d:Director {name: Quentin Tarantino’})-[:DIRECTED]->(m:Movie) RETURN m LIMIT 3
-Which actor has the highest average IMDb rating across all of their movies released in the 21st century?;
+Which actor has the highest average IMDb rating across all of their movies released in the 21st century?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie) WHERE m.year >= 2000 AND m.imdbRating IS NOT NULL
+RETURN a.name, AVG(m.imdbRating) AS avgRating ORDER BY avgRating DESC LIMIT 1
+"
 Who is the oldest actor to have portrayed a Marvel superhero, and which movie did they appear in last?;
-Among directors who have directed both horror and comedy films, which one has the highest combined revenue?;
-Which actor has been directed the most times by Martin Scorsese, and for each collaboration, what was the movie’s IMDb rating?;
-Find the director whose debut movie achieved the highest score.;
-Which actress made her debut in the highest-grossing comedy film of the 1980s?;
-Which movie from the 2010s has the largest difference between revenue and budget, which countries produced it, and who directed it?;
-Find the director whose movies have the highest average imdbRating but only considering movies under 100 minutes (runtime < 100). List those movies.;
-Which actor has acted in the most languages across their filmography, and list those languages?;
-Among all movies with a budget under $5,000,000, which one has the highest imdbRating, and which genres does it belong to?;
-Name the actor who has the largest difference between their earliest year and latest year of acting, and which genres are most common in their filmography?;
+Among directors who have directed both horror and comedy films, which one has the highest combined revenue?;"MATCH (d:Person)-[:DIRECTED]->(m1:Movie)-[:IN_GENRE]->(g1:Genre) WHERE g1.name in ['Horror', 'Comedy']
+WITH d, SUM(m1.revenue) AS totalRevenue, collect(distinct g1.name) AS genres
+WHERE size(genres) = 2 // making sure directed both horror and comedy
+RETURN d.name, totalRevenue ORDER BY totalRevenue DESC LIMIT 1
+"
+Which actor has been directed the most times by Martin Scorsese, and for each collaboration, what was the movie’s IMDb rating?;"MATCH (d:Person {name: 'Martin Scorsese'})-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(a:Person)
+RETURN a.name, COUNT(m) AS collaborationCount, COLLECT({movie: m.title, imdbRating: m.imdbRating}) AS movies
+ORDER BY collaborationCount DESC LIMIT 1
+"
+Find the director whose debut movie achieved the highest score.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
+WHERE m.imdbRating IS NOT NULL
+WITH d, m ORDER BY m.year ASC
+WITH d, COLLECT(m)[0] AS debutMovie
+RETURN d.name, debutMovie.title, debutMovie.imdbRating ORDER BY debutMovie.imdbRating DESC LIMIT 1
+"
+Which actor or actress made their debut in the highest-grossing comedy film of the 1980s?;"MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+WHERE g.name = 'Comedy' AND m.year >= 1980 AND m.year < 1990 AND m.revenue IS NOT NULL
+WITH m ORDER BY m.revenue DESC LIMIT 1
+MATCH (m)<-[:ACTED_IN]-(actor)
+WHERE NOT EXISTS {
+MATCH (actor)-[:ACTED_IN]->(otherMovie:Movie)
+WHERE otherMovie.year < m.year
+}
+RETURN m.title, actor.name
+"
+Which movie from the 2010s has the largest difference between revenue and budget, which countries produced it, and who directed it?;"MATCH (m:Movie)-[:IN_GENRE]->(g:Genre), (p:Person)-[:DIRECTED]->(m)
+WHERE m.year >= 2010 AND m.year < 2020 AND m.revenue IS NOT NULL and m.budget IS NOT NULL
+WITH m, p, (m.revenue - m.budget) AS profit
+ORDER BY profit DESC LIMIT 1
+RETURN m.title AS movie, profit AS largestDifference, m.countries AS countries, p.name AS director
+"
+Find the director whose movies have the highest average imdbRating but only considering movies under 100 minutes (runtime < 100).;"MATCH (d:Person)-[:DIRECTED]->(m:Movie) WHERE m.runtime < 100 AND m.imdbRating IS NOT NULL
+WITH d, avg(m.imdbRating) AS avgRating, collect(m.title) AS movies
+ORDER BY avgRating DESC LIMIT 1
+RETURN d.name AS director, avgRating, movies
+"
+Which actor has acted in the most languages across their filmography, and list those languages?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie)
+WITH a, apoc.coll.toSet(apoc.coll.flatten(COLLECT(m.languages))) AS allLanguages
+ORDER BY size(allLanguages) DESC LIMIT 1
+RETURN a.name, allLanguages
+"
+Among all movies with a budget under $5,000,000, which one has the highest imdbRating, and which genres does it belong to?;"MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
+WHERE m.budget < 5000000 AND m.imdbRating IS NOT NULL
+RETURN m.title, m.imdbRating, COLLECT(g.name) AS genres
+ORDER BY m.imdbRating DESC LIMIT 1
+"
+Name the actor who has the largest difference between their earliest year and latest year of acting, and which genres are most common in their filmography?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+WHERE m.year IS NOT NULL
+WITH a, g.name AS genre, MIN(m.year) AS earliestYear, MAX(m.year) AS latestYear, MAX(m.year) - MIN(m.year) AS yearDifference
+ORDER BY yearDifference DESC LIMIT 1
+WITH a, yearDifference, COLLECT(genre) AS genres
+RETURN a.name AS actor, yearDifference, genres AS mostCommonGenres
+"
 Which director has made at least one movie in each of the following languages: English, French, and Spanish, and name the highest imdbRating film from each language category.;
 Which actor has the highest cumulative revenue across all movies they starred in, ignoring any movie with budget under $1,000,000?;
 Find all directors who released their first movie (released) after the year 2000 and have directed at least one movie with an imdbRating over 9. Name those high-rated movies.;
