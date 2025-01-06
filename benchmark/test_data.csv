@@ -69,9 +69,27 @@ Name the actor who has the largest difference between their earliest year and la
 Which director has made at least one movie in each of the following languages: English, French, and Spanish, and name the highest imdbRating film from each language category.;
 Which actor has the highest cumulative revenue across all movies they starred in, ignoring any movie with budget under $1,000,000?;
 Find all directors who released their first movie (released) after the year 2000 and have directed at least one movie with an imdbRating over 9. Name those high-rated movies.;
-Which movie from the 1970s has a cast that includes at least one actor born before 1920, and who are the top two oldest actors in that film?;
+Find the actor who make the most revenue if their debut movie.;
+Which movie from the 2010s has a cast that includes at least one actor born before 1920?;"MATCH (m:Movie)<-[:ACTED_IN]-(a:Person)
+WHERE m.year >= 2010 AND m.year < 2020 AND a.born < date(""1920-01-01"")
+RETURN m.title AS movie, collect(a.name) AS actor
+"
 Find the director who has directed at least one movie every 5 years (based on year) for at least three consecutive intervals, and list those movies.;
-Find the oldest living director who has directed a movie in the 'Documentary' genre.;
+Find the oldest living director who has directed a movie in the 'Documentary' genre.;"MATCH (p:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Documentary'})
+WHERE p.died IS NULL AND p.born IS NOT NULL
+RETURN p.name AS directorName, p.born AS birthDate ORDER BY p.born ASC LIMIT 1
+"
 Among all actors who have acted in a movie that is less than 90 minutes (runtime < 90), which one also appears in the longest movie (runtime is max) in the entire database, and name them.;
-Identify the director who has the highest total revenue across their filmography if we only consider films made in English, and name two of their top-earning films.;
-Find the actor who has the broadest range of genres across their filmography.;
+Identify the director who has the highest total revenue across their filmography if we only consider films made in English, and name two of their top-earning films.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
+WHERE ""English"" IN m.languages AND m.revenue IS NOT NULL
+WITH d, SUM(m.revenue) AS totalRevenue, COLLECT(m) AS movies
+ORDER BY totalRevenue DESC LIMIT 1 UNWIND movies AS topMovies
+RETURN d.name AS director, totalRevenue, topMovies.title AS movieTitle, topMovies.revenue AS movieRevenue
+ORDER BY movieRevenue DESC LIMIT 2
+"
+Find the actor who has the broadest range of genres across their filmography.;"MATCH (a:Person)-[:ACTED_IN]->(:Movie)-[:IN_GENRE]->(g:Genre)
+WITH a, COUNT(DISTINCT g.name) AS genreCount
+RETURN a.name, genreCount
+ORDER BY genreCount DESC
+LIMIT 1
+"
