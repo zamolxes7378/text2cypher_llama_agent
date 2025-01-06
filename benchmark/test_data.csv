@@ -1,6 +1,11 @@
 Question;Cypher
 Who acted in Tom Hanks’s highest-rated movie?;MATCH (p:Person {name: 'Tom Hanks'})-[:ACTED_IN]->(m:Movie) WITH m ORDER BY m.imdbRating DESC LIMIT 1 MATCH (m)<-[:ACTED_IN]-(a:Person) RETURN a.name, m.title
-Which movie starring Meg Ryan has the most actors in common with a Tom Hanks movie?;
+Which movie starring Keanu Reeves has the most actors in common with a Tom Hanks movie?;"MATCH (meg:Actor {name: ""Keanu Reeves""})-[:ACTED_IN]->(megMovie:Movie)<-[:ACTED_IN]-(commonActor:Actor),
+(tom:Actor {name: ""Tom Hanks""})-[:ACTED_IN]->(tomMovie:Movie)<-[:ACTED_IN]-(commonActor)
+RETURN megMovie.title AS Movie, COUNT(DISTINCT commonActor) AS CommonActors
+ORDER BY CommonActors DESC
+LIMIT 1
+"
 Who directed the most recent movie starring Halle Berry, and which other actors starred in that director’s earlier movies?;"MATCH (p:Person {name: ""Halle Berry""})-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Person)
 WITH d, m
 ORDER BY m.released DESC
@@ -9,7 +14,6 @@ MATCH (d)-[:DIRECTED]->(earlier:Movie)<-[:ACTED_IN]-(a:Person)
 WHERE earlier <> m
 RETURN d.name AS director, m.title AS mostRecentMovie, COLLECT(DISTINCT a.name) AS otherActorsInEarlierMovies
 "
-Which actors starred together in the same movie as Bruce Willis and later appeared in a movie directed by the same person who directed Bruce Willis before?;
 What is the highest-rated movie from the 1990s, who directed it, and which other films did that director make?;"MATCH (m:Movie)-[:DIRECTED]-(d:Person) WHERE m.year >= 1990 AND m.year < 2000 WITH m, d ORDER BY m.imdbRating DESC LIMIT 1 MATCH (d)-[:DIRECTED]->(other:Movie) WHERE other <> m RETURN m.title AS highestRatedMovie, m.imdbRating AS rating, d.name AS director, COLLECT(other.title) AS otherMovies
 "
 For all movies starring Keanu Reeves, find the director who worked the most times with him and list the co-stars across those collaborations.;"MATCH (keanu:Person {name: ""Keanu Reeves""})-[:ACTED_IN]->(:Movie)<-[:DIRECTED]-(d:Person)
@@ -37,14 +41,55 @@ WHERE g1.name in ['Comedy', 'Thriller']
 RETURN a.name, count(*) AS count, collect(distinct g1.name) as genres
 ORDER BY count DESC LIMIT 3
 "
-Which pair of actors have starred in the largest number of movies together and who directed most of those collaborations?;
-Name the actor who starred with Harrison Ford in at least two movies.;
-Which actors appear in both a movie directed by Quentin Tarantino and another directed by the Wachowskis.;
-Which actors have starred in movies rated below 5 and also in movies rated above 9?;
-Among comedy films that grossed over $100 million, which one features the oldest actor.;
-Which directors have themselves acted in at least three of their own movies?;
-What is the most common language among movies with a budget lower than 10 million dollars?;
-Identify the first 3 genres most frequently linked to movies directed by 'Steven Spielberg'.;
+Which pair of actors have starred in the largest number of movies together and who directed most of those collaborations?;"MATCH (a1:Actor)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(a2:Actor)
+WHERE id(a1) < id(a2)
+WITH a1, a2, COUNT(m) AS collaborations
+ORDER BY collaborations DESC
+LIMIT 1
+MATCH (a1)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(a2),
+(d:Director)-[:DIRECTED]->(m)
+RETURN a1.name AS Actor1, a2.name AS Actor2, collect(distinct d.name) AS Director, COUNT(m) AS DirectedMovies, collaborations
+
+"
+Name the actor who starred with Harrison Ford in at least two movies.;"MATCH (actor:Actor)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(harrison:Actor {name: ""Harrison Ford""})
+WITH actor, COUNT(m) AS movieCount
+WHERE movieCount >= 2
+RETURN actor.name
+"
+Which actors appear in both a movie directed by Quentin Tarantino and another directed by the Randal Kleiser.;"MATCH (actor:Actor)-[:ACTED_IN]->(movie1:Movie)<-[:DIRECTED]-(director1:Director {name: ""Quentin Tarantino""}),
+(actor)-[:ACTED_IN]->(movie2:Movie)<-[:DIRECTED]-(director2:Director {name:""Randal Kleiser""})
+RETURN DISTINCT actor.name
+"
+Which actors have starred in movies rated below 5 and also in movies rated above 9?;"MATCH (a:Actor)-[:ACTED_IN]->(m1:Movie)
+WHERE m1.imdbRating < 5
+MATCH (a)-[:ACTED_IN]->(m2:Movie)
+WHERE m2.imdbRating > 9
+RETURN DISTINCT a.name
+"
+Among comedy films that grossed over $100 million, which one features the oldest actor.;"MATCH (m:Movie)-[:IN_GENRE]->(g:Genre {name: ""Comedy""}), 
+      (a:Actor)-[:ACTED_IN]->(m)
+WHERE m.revenue > 100000000
+RETURN m.title, a.name, a.born
+ORDER BY a.born
+LIMIT 1
+"
+Which directors have themselves acted in at least three of their own movies?;"MATCH (d:Director)-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(d)
+WITH d, COUNT(m) AS actedInCount
+WHERE actedInCount >= 3
+RETURN d.name
+"
+What is the most common language among movies with a budget lower than 10 million dollars?;"MATCH (m:Movie)
+WHERE m.budget < 10000000
+UNWIND m.languages AS language
+RETURN language, COUNT(language) AS frequency
+ORDER BY frequency DESC
+LIMIT 1
+"
+Identify the first 3 genres most frequently linked to movies directed by 'Steven Spielberg'.;"MATCH (d:Director {name: 'Steven Spielberg'})-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+RETURN g.name, COUNT(*) AS genreCount
+ORDER BY genreCount DESC
+LIMIT 3
+"
 List the top 5 oldest actors in the database.;MATCH (a:Actor) WHERE a.born IS NOT NULL RETURN a.name, a.born ORDER BY a.born ASC LIMIT 5
 List the top 5 movies with the most IMDb votes.;MATCH (m:Movie) RETURN m.title, m.imdbVotes ORDER BY m.imdbVotes DESC LIMIT 5
 Which 3 movies have the highest revenue to budget ratio?;MATCH (m:Movie) WHERE m.budget IS NOT NULL AND m.revenue IS NOT NULL RETURN m.title AS movie, toFloat(m.revenue) / m.budget AS revenueToBudgetRatio ORDER BY revenueToBudgetRatio DESC LIMIT 3
@@ -167,3 +212,8 @@ RETURN a.name, genreCount
 ORDER BY genreCount DESC
 LIMIT 1
 "
+Who made more movies, Leonardo di Caprio or Tom Hanks most frequent coactor?;
+Who has appeared in more movies: Leonardo DiCaprio or the actor who has co-starred most frequently with the director of Tom Hanks' most critically acclaimed movie?;
+Between the highest-grossing movie starring Matt Damon and the highest-grossing movie starring Johnny Depp, which has more co-stars in common with Meryl Streep?;
+Which movie has a higher IMDb rating: the oldest film starring the person who directed the most profitable comedy of the 1990s, or the newest film starring the person who directed the least profitable action movie of the 2000s?;
+Among the directors who have acted in at least five different genres, who directed the movie with the greatest difference between its IMDb rating;
