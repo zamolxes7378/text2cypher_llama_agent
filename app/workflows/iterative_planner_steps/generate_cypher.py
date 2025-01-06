@@ -78,7 +78,6 @@ generate_cypher_msgs = [
 text2cypher_prompt = ChatPromptTemplate.from_messages(generate_cypher_msgs)
 
 schema = graph_store.get_schema_str(exclude_types=["Actor", "Director"])
-print(schema)
 
 
 async def generate_cypher_step(subquery):
