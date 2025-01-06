@@ -112,10 +112,39 @@ ORDER BY yearDifference DESC LIMIT 1
 WITH a, yearDifference, COLLECT(genre) AS genres
 RETURN a.name AS actor, yearDifference, genres AS mostCommonGenres
 "
-Which director has made at least one movie in each of the following languages: English, French, and Spanish, and name the highest imdbRating film from each language category.;
-Which actor has the highest cumulative revenue across all movies they starred in, ignoring any movie with budget under $1,000,000?;
-Find all directors who released their first movie (released) after the year 2000 and have directed at least one movie with an imdbRating over 9. Name those high-rated movies.;
-Find the actor who make the most revenue if their debut movie.;
+Which director has made at least one movie in each of the following languages: English, French, and Spanish, and name their highest imdbRating film.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
+WITH d, apoc.coll.toSet(apoc.coll.flatten(collect(m.languages))) as languages
+WHERE 'English' IN languages AND
+'French' IN languages AND
+'Spanish' IN languages
+WITH d
+CALL (d) {
+MATCH (d)-[:DIRECTED]->(movie)
+WHERE movie.imdbRating IS NOT NULL
+RETURN movie.title AS top_movie, movie.imdbRating AS top_rating
+ORDER BY movie.imdbRating DESC LIMIT 1
+}
+RETURN d.name AS director, top_movie, top_rating
+"
+Which actor has the highest cumulative revenue across all movies they starred in, ignoring any movie with budget under $1,000,000?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie) WHERE m.budget >= 1000000
+RETURN a.name, SUM(m.revenue) AS totalRevenue ORDER BY totalRevenue DESC LIMIT 1
+"
+Find all directors who released their first movie (released) after the year 2000 and have directed at least one movie with an imdbRating over 8.6. Name those high-rated movies.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
+WITH d, MIN(m.year) AS firstMovieYear
+WHERE firstMovieYear > 2000
+MATCH (d)-[:DIRECTED]->(movie) WHERE movie.imdbRating > 8.6
+WITH d, movie ORDER BY movie.imdbRating DESC
+RETURN d.name as director, movie.title as movie, movie.imdbRating AS rating
+"
+Find the actor who made the most revenue in their debut movie.;"MATCH (a:Actor)-[:ACTED_IN]->(m:Movie)
+WHERE m.revenue IS NOT NULL
+WITH a, m
+ORDER BY m.year ASC
+WITH a, collect(m)[0] AS debutMovie
+RETURN a.name AS actor, debutMovie.title as movie, debutMovie.revenue AS revenue
+ORDER BY revenue DESC
+LIMIT 1
+"
 Which movie from the 2010s has a cast that includes at least one actor born before 1920?;"MATCH (m:Movie)<-[:ACTED_IN]-(a:Person)
 WHERE m.year >= 2010 AND m.year < 2020 AND a.born < date(""1920-01-01"")
 RETURN m.title AS movie, collect(a.name) AS actor
@@ -125,7 +154,6 @@ Find the oldest living director who has directed a movie in the 'Documentary' ge
 WHERE p.died IS NULL AND p.born IS NOT NULL
 RETURN p.name AS directorName, p.born AS birthDate ORDER BY p.born ASC LIMIT 1
 "
-Among all actors who have acted in a movie that is less than 90 minutes (runtime < 90), which one also appears in the longest movie (runtime is max) in the entire database, and name them.;
 Identify the director who has the highest total revenue across their filmography if we only consider films made in English, and name two of their top-earning films.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
 WHERE ""English"" IN m.languages AND m.revenue IS NOT NULL
 WITH d, SUM(m.revenue) AS totalRevenue, COLLECT(m) AS movies
