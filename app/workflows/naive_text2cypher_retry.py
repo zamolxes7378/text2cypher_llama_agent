@@ -81,7 +81,6 @@ class NaiveText2CypherRetryFlow(Workflow):
     async def correct_cypher_step(
         self, ctx: Context, ev: CorrectCypherEvent
     ) -> ExecuteCypherEvent:
-        print("#" * 30)
         results = await correct_cypher_step(ev.question, ev.cypher, ev.error)
         return ExecuteCypherEvent(question=ev.question, cypher=results)
 
@@ -100,7 +99,13 @@ class NaiveText2CypherRetryFlow(Workflow):
             ctx.write_event_to_stream(final_event)
             await asyncio.sleep(0.05)
 
-        stop_event = StopEvent(result=f"{ev.cypher}<split>{final_answer}")
+        stop_event = StopEvent(
+            result={
+                "cypher": ev.cypher,
+                "question": ev.question,
+                "answer": final_answer,
+            }
+        )
 
         # Return the final result
         return stop_event
