@@ -1,50 +1,77 @@
-Question
-"Who acted in Tom Hanks’s highest-rated movie?"
-"Which movie starring Meg Ryan has the most actors in common with a Tom Hanks movie?"
-"Who directed the most recent movie starring Halle Berry, and which other actors starred in that director’s earlier movies?"
-"Which actors starred together in the same movie as Bruce Willis and later appeared in a movie directed by the same person who directed Bruce Willis before?"
-"What is the highest-rated movie from the 1990s, who directed it, and which other films did that director make?"
-"For all movies starring Keanu Reeves, find the director who worked the most times with him and list the co-stars across those collaborations."
-"Find the actor who has starred with Tom Hanks, Meg Ryan, and Bruce Willis, and in which movie(s) did these collaborations happen?"
-"Which 1980s movie with Meryl Streep was directed by someone who had previously acted in a different Meryl Streep film?"
-"Which horror movie has the highest rating, who directed it, and which actors are in?"
-"Find the director of the drama movie that has the longest runtime, and list all their movies that are under two hours."
-"Which actor starred in both a romantic comedy and a crime thriller?"
-"Which pair of actors have starred in the largest number of movies together and who directed most of those collaborations?"
-"Name the actor who starred with Harrison Ford in at least two movies."
-"Which actors appear in both a movie directed by Quentin Tarantino and another directed by the Wachowskis."
-"Which actors have starred in movies rated below 5 and also in movies rated above 9?"
-"Among comedy films that grossed over $100 million, which one features the oldest actor."
-"Which directors have themselves acted in at least three of their own movies?"
-"What is the most common language among movies with a budget lower than 10 million dollars?"
-"Identify the first 3 genres most frequently linked to movies directed by 'Steven Spielberg'."
-"List the top 5 oldest actors in the database."
-"List the top 5 movies with the most IMDb votes."
-"Which 3 movies have the highest revenue to budget ratio?"
-"What is the name of the genre associated with the movie 'Jumanji'?"
-"Name the top 5 movies with the most IMDb votes released before the year 2000."
-"What is the average IMDb rating of movies with a runtime under 90 minutes?"
-"List the top 3 directors by the number of movies directed."
-"What are the top 5 movies with the highest number of countries involved?"
-"List the top 5 actors by number of different genres they've acted in."
-"List 3 movies directed by 'Anthony Stacchi'."
-"Which actor has the highest average IMDb rating across all of their movies released in the 21st century?"
-"Who is the oldest actor to have portrayed a Marvel superhero, and which movie did they appear in last?"
-"Among directors who have directed both horror and comedy films, which one has the highest combined revenue?"
-"Which actor has been directed the most times by Martin Scorsese, and for each collaboration, what was the movie’s IMDb rating?"
-"Find the director whose debut movie achieved the highest score."
-"Which actress made her debut in the highest-grossing comedy film of the 1980s?"
-"Which movie from the 2010s has the largest difference between revenue and budget, which countries produced it, and who directed it?"
-"Find the director whose movies have the highest average imdbRating but only considering movies under 100 minutes (runtime < 100). List those movies."
-"Which actor has acted in the most languages across their filmography, and list those languages?"
-"Among all movies with a budget under $5,000,000, which one has the highest imdbRating, and which genres does it belong to?"
-"Name the actor who has the largest difference between their earliest year and latest year of acting, and which genres are most common in their filmography?"
-"Which director has made at least one movie in each of the following languages: English, French, and Spanish, and name the highest imdbRating film from each language category."
-"Which actor has the highest cumulative revenue across all movies they starred in, ignoring any movie with budget under $1,000,000?"
-"Find all directors who released their first movie (released) after the year 2000 and have directed at least one movie with an imdbRating over 9. Name those high-rated movies."
-"Which movie from the 1970s has a cast that includes at least one actor born before 1920, and who are the top two oldest actors in that film?"
-"Find the director who has directed at least one movie every 5 years (based on year) for at least three consecutive intervals, and list those movies."
-"Find the oldest living director who has directed a movie in the 'Documentary' genre."
-"Among all actors who have acted in a movie that is less than 90 minutes (runtime < 90), which one also appears in the longest movie (runtime is max) in the entire database, and name them."
-"Identify the director who has the highest total revenue across their filmography if we only consider films made in English, and name two of their top-earning films."
-"Find the actor who has the broadest range of genres across their filmography."
+Question;Cypher
+Who acted in Tom Hanks’s highest-rated movie?;MATCH (p:Person {name: 'Tom Hanks'})-[:ACTED_IN]->(m:Movie) WITH m ORDER BY m.imdbRating DESC LIMIT 1 MATCH (m)<-[:ACTED_IN]-(a:Person) RETURN a.name, m.title
+Which movie starring Meg Ryan has the most actors in common with a Tom Hanks movie?;
+Who directed the most recent movie starring Halle Berry, and which other actors starred in that director’s earlier movies?;"MATCH (p:Person {name: ""Halle Berry""})-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Person)
+WITH d, m
+ORDER BY m.released DESC
+LIMIT 1
+MATCH (d)-[:DIRECTED]->(earlier:Movie)<-[:ACTED_IN]-(a:Person)
+WHERE earlier <> m
+RETURN d.name AS director, m.title AS mostRecentMovie, COLLECT(DISTINCT a.name) AS otherActorsInEarlierMovies
+"
+Which actors starred together in the same movie as Bruce Willis and later appeared in a movie directed by the same person who directed Bruce Willis before?;
+What is the highest-rated movie from the 1990s, who directed it, and which other films did that director make?;"MATCH (m:Movie)-[:DIRECTED]-(d:Person) WHERE m.year >= 1990 AND m.year < 2000 WITH m, d ORDER BY m.imdbRating DESC LIMIT 1 MATCH (d)-[:DIRECTED]->(other:Movie) WHERE other <> m RETURN m.title AS highestRatedMovie, m.imdbRating AS rating, d.name AS director, COLLECT(other.title) AS otherMovies
+"
+For all movies starring Keanu Reeves, find the director who worked the most times with him and list the co-stars across those collaborations.;"MATCH (keanu:Person {name: ""Keanu Reeves""})-[:ACTED_IN]->(:Movie)<-[:DIRECTED]-(d:Person)
+WITH keanu, d, count(*) AS collaborations
+ORDER BY collaborations DESC LIMIT 1
+MATCH (d)-[:DIRECTED]->(m)<-[:ACTED_IN]-(others)
+RETURN d.name AS director, collaborations, collect(distinct m.title) AS titles, collect(distinct others.name) AS costars
+"
+Find the actor who has starred with all from the list of Tom Hanks, Meg Ryan, and Bruce Willis!;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(p:Person) WHERE p.name IN ['Tom Hanks', 'Meg Ryan', 'Bruce Willis']
+WITH a, size(collect(distinct p)) AS count
+// acted with all three
+WHERE count = 3
+RETURN a.name
+"
+Which horror movie has the highest rating, who directed it, and which actors are in?;"MATCH (d)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: ""Horror""}),
+(a)-[:ACTED_IN]->(m)
+WHERE m.imdbRating IS NOT NULL
+RETURN m.title AS movieTitle, m.imdbRating AS rating, d.name AS director, COLLECT(a.name) AS actors
+ORDER BY m.imdbRating DESC LIMIT 1
+"
+Find the director of the drama movie that has the longest runtime, and list all their movies that are under two hours.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Drama'}) WITH d, m ORDER BY m.runtime DESC LIMIT 1 MATCH (d)-[:DIRECTED]->(shortMovies:Movie) WHERE shortMovies.runtime < 120 RETURN d.name AS director, shortMovies.title AS movieTitle
+"
+Which 3 actors have starred the most in both a comedy and a thriller?;"MATCH (a:Person)-[:ACTED_IN]->(:Movie)-[:IN_GENRE]->(g1:Genre)
+WHERE g1.name in ['Comedy', 'Thriller']
+RETURN a.name, count(*) AS count, collect(distinct g1.name) as genres
+ORDER BY count DESC LIMIT 3
+"
+Which pair of actors have starred in the largest number of movies together and who directed most of those collaborations?;
+Name the actor who starred with Harrison Ford in at least two movies.;
+Which actors appear in both a movie directed by Quentin Tarantino and another directed by the Wachowskis.;
+Which actors have starred in movies rated below 5 and also in movies rated above 9?;
+Among comedy films that grossed over $100 million, which one features the oldest actor.;
+Which directors have themselves acted in at least three of their own movies?;
+What is the most common language among movies with a budget lower than 10 million dollars?;
+Identify the first 3 genres most frequently linked to movies directed by 'Steven Spielberg'.;
+List the top 5 oldest actors in the database.;MATCH (a:Actor) WHERE a.born IS NOT NULL RETURN a.name, a.born ORDER BY a.born ASC LIMIT 5
+List the top 5 movies with the most IMDb votes.;MATCH (m:Movie) RETURN m.title, m.imdbVotes ORDER BY m.imdbVotes DESC LIMIT 5
+Which 3 movies have the highest revenue to budget ratio?;MATCH (m:Movie) WHERE m.budget IS NOT NULL AND m.revenue IS NOT NULL RETURN m.title AS movie, toFloat(m.revenue) / m.budget AS revenueToBudgetRatio ORDER BY revenueToBudgetRatio DESC LIMIT 3
+What is the name of the genre associated with the movie 'Jumanji'?;"MATCH (m:Movie {title: ""Jumanji""}) MATCH (m)-[:IN_GENRE]->(g:Genre) RETURN g.name"
+Name the top 5 movies with the most IMDb votes released before the year 2000.;MATCH (m:Movie) WHERE m.year < 2000 RETURN m.title AS title, m.imdbVotes AS votes ORDER BY m.imdbVotes DESC LIMIT 5
+What is the average IMDb rating of movies with a runtime under 90 minutes?;MATCH (m:Movie) WHERE m.runtime < 90 RETURN avg(m.imdbRating) AS averageImdbRating
+List the top 3 directors by the number of movies directed.;MATCH (d:Director)-[:DIRECTED]->(m:Movie) RETURN d.name AS director, count(m) AS moviesDirected ORDER BY moviesDirected DESC LIMIT 3
+What are the top 5 movies with the highest number of countries involved?;MATCH (m:Movie) WITH m, size(m.countries) AS countryCount ORDER BY countryCount DESC LIMIT 5 RETURN m.title AS title, countryCount
+List the top 5 actors by number of different genres they've acted in.;MATCH (a:Actor)-[:ACTED_IN]->(m:Movie)-[:IN_GENRE]->(g:Genre) WITH a, count(distinct g) AS genreCount ORDER BY genreCount DESC LIMIT 5 RETURN a.name AS actor, genreCount AS numberOfGenres
+List movies directed by ‘Quentin Tarantino'.;MATCH (d:Director {name: Quentin Tarantino’})-[:DIRECTED]->(m:Movie) RETURN m LIMIT 3
+Which actor has the highest average IMDb rating across all of their movies released in the 21st century?;
+Who is the oldest actor to have portrayed a Marvel superhero, and which movie did they appear in last?;
+Among directors who have directed both horror and comedy films, which one has the highest combined revenue?;
+Which actor has been directed the most times by Martin Scorsese, and for each collaboration, what was the movie’s IMDb rating?;
+Find the director whose debut movie achieved the highest score.;
+Which actress made her debut in the highest-grossing comedy film of the 1980s?;
+Which movie from the 2010s has the largest difference between revenue and budget, which countries produced it, and who directed it?;
+Find the director whose movies have the highest average imdbRating but only considering movies under 100 minutes (runtime < 100). List those movies.;
+Which actor has acted in the most languages across their filmography, and list those languages?;
+Among all movies with a budget under $5,000,000, which one has the highest imdbRating, and which genres does it belong to?;
+Name the actor who has the largest difference between their earliest year and latest year of acting, and which genres are most common in their filmography?;
+Which director has made at least one movie in each of the following languages: English, French, and Spanish, and name the highest imdbRating film from each language category.;
+Which actor has the highest cumulative revenue across all movies they starred in, ignoring any movie with budget under $1,000,000?;
+Find all directors who released their first movie (released) after the year 2000 and have directed at least one movie with an imdbRating over 9. Name those high-rated movies.;
+Which movie from the 1970s has a cast that includes at least one actor born before 1920, and who are the top two oldest actors in that film?;
+Find the director who has directed at least one movie every 5 years (based on year) for at least three consecutive intervals, and list those movies.;
+Find the oldest living director who has directed a movie in the 'Documentary' genre.;
+Among all actors who have acted in a movie that is less than 90 minutes (runtime < 90), which one also appears in the longest movie (runtime is max) in the entire database, and name them.;
+Identify the director who has the highest total revenue across their filmography if we only consider films made in English, and name two of their top-earning films.;
+Find the actor who has the broadest range of genres across their filmography.;
