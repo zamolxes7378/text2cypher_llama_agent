@@ -64,12 +64,14 @@ class NaiveText2CypherFlow(Workflow):
             )
         )
         final_event = StringEvent(result="", label="Final answer")
+        final_answer = ""
         async for response in gen:
             final_event.result = response.delta
+            final_answer += response.delta
             ctx.write_event_to_stream(final_event)
             await asyncio.sleep(0.05)
 
-        stop_event = StopEvent(result="Workflow completed.")
+        stop_event = StopEvent(result=f"{ev.cypher}<split>{final_answer}")
 
         # Return the final result
         return stop_event
