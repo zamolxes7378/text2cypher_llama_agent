@@ -1,6 +1,5 @@
 import asyncio
 from typing import List
-from uuid import uuid4
 
 from llama_index.core.workflow import (
     Context,
@@ -10,8 +9,8 @@ from llama_index.core.workflow import (
     Workflow,
     step,
 )
-from pydantic import UUID4, Field
 
+from app.workflows.frontend_events import StringEvent
 from app.workflows.iterative_planner_steps import *
 from app.workflows.utils import graph_store, llm
 
@@ -50,15 +49,6 @@ class InformationCheck(Event):
 
 class FinalAnswer(Event):
     context: str
-
-
-# Frontend events
-
-
-class StringEvent(Event):
-    uuid: UUID4 = Field(default_factory=uuid4)
-    result: str
-    # label: str
 
 
 class IterativePlanningFlow(Workflow):

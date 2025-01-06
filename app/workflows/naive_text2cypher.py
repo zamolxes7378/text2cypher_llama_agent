@@ -1,6 +1,4 @@
 import asyncio
-import os
-from uuid import uuid4
 
 from llama_index.core.workflow import (
     Context,
@@ -10,54 +8,65 @@ from llama_index.core.workflow import (
     Workflow,
     step,
 )
-from llama_index.llms.openai import OpenAI
-from pydantic import UUID4, Field
+
+from app.workflows.frontend_events import StringEvent
+from app.workflows.naive_text2cypher_steps import (
+    generate_cypher_step,
+    naive_final_answer_prompt,
+)
+from app.workflows.utils import graph_store, llm
 
 
-class JokeEvent(Event):
-    uuid: UUID4 = Field(default_factory=uuid4)
-    result: str
+class SummarizeEvent(Event):
+    question: str
+    cypher: str
+    context: str
 
 
-class CritiqueEvent(Event):
-    uuid: UUID4 = Field(default_factory=uuid4)
-    result: str
+class ExecuteCypherEvent(Event):
+    question: str
+    cypher: str
 
 
 class NaiveText2CypherFlow(Workflow):
-    llm = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
     @step
-    async def generate_joke(self, ctx: Context, ev: StartEvent) -> JokeEvent:
-        input = ev.input
-        if not input:
-            raise ValueError(f"generate_joke is missing input.")
+    async def generate_cypher(self, ctx: Context, ev: StartEvent) -> ExecuteCypherEvent:
+        question = ev.input
 
-        prompt = f"Write your best joke about {input}."
-        response = await self.llm.acomplete(prompt)
+        cypher_query = await generate_cypher_step(question)
 
-        # Emit the joke event
-        joke_event = JokeEvent(result=str(response))
-        ctx.write_event_to_stream(joke_event)
-
-        # Return for the next step
-        return joke_event
-
-    @step
-    async def critique_joke(self, ctx: Context, ev: JokeEvent) -> StopEvent:
-        joke = ev.result
-        if not joke:
-            raise ValueError(f"critique_joke is missing joke.")
-
-        prompt = (
-            f"Give a 1 sentence analysis and critique of the following joke: {joke}"
+        ctx.write_event_to_stream(
+            StringEvent(
+                result=f"Generated Cypher: {cypher_query}", label="Cypher generation"
+            )
         )
 
-        gen = await self.llm.astream_complete(prompt)
-        critique_event = CritiqueEvent(result="")
+        # Return for the next step
+        return ExecuteCypherEvent(question=question, cypher=cypher_query)
+
+    @step
+    async def execute_query(
+        self, ctx: Context, ev: ExecuteCypherEvent
+    ) -> SummarizeEvent:
+        try:
+            database_output = str(graph_store.structured_query(ev.cypher))
+        except Exception as e:
+            database_output = str(e)
+        return SummarizeEvent(
+            question=ev.question, cypher=ev.cypher, context=database_output
+        )
+
+    @step
+    async def summarize_answer(self, ctx: Context, ev: SummarizeEvent) -> StopEvent:
+        gen = await llm.astream_chat(
+            naive_final_answer_prompt.format_messages(
+                context=ev.context, question=ev.question, cypher_query=ev.cypher
+            )
+        )
+        final_event = StringEvent(result="", label="Final answer")
         async for response in gen:
-            critique_event.result = response.delta
-            ctx.write_event_to_stream(critique_event)
+            final_event.result = response.delta
+            ctx.write_event_to_stream(final_event)
             await asyncio.sleep(0.05)
 
         stop_event = StopEvent(result="Workflow completed.")
