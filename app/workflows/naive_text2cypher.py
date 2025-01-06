@@ -24,7 +24,7 @@ class CritiqueEvent(Event):
     result: str
 
 
-class JokeWorkflow(Workflow):
+class NaiveText2CypherFlow(Workflow):
     llm = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     @step

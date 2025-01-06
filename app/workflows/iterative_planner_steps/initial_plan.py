@@ -1,18 +1,24 @@
+from typing import List
+
 from llama_index.core import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-from typing import List
-
 from app.workflows.utils import llm
+
 
 class SubqueriesOutput(BaseModel):
     """Defines the output format for transforming a question into parallel-optimized retrieval steps."""
-    
-    plan: List[List[str]] = Field(description=("""A list of query groups where:
+
+    plan: List[List[str]] = Field(
+        description=(
+            """A list of query groups where:
         - Each group (inner list) contains queries that can be executed in parallel
         - Groups are ordered by dependency (earlier groups must be executed before later ones)
         - Each query must be a specific information retrieval request
-        - No reasoning or comparison tasks, only data fetching queries"""))
+        - No reasoning or comparison tasks, only data fetching queries"""
+        )
+    )
+
 
 subqueries_system = """You are a query planning optimizer. Your task is to break down complex questions into efficient, parallel-optimized retrieval steps. Focus ONLY on information retrieval queries, not analysis or reasoning steps.
 
@@ -59,18 +65,16 @@ Remember:
 - Keep queries specific and self-contained
 - Prioritize independent queries first"""
 
-query_decompose_msgs = [
-    ("system", subqueries_system),
-    ("user", "{question}")
-]
+query_decompose_msgs = [("system", subqueries_system), ("user", "{question}")]
 
 subquery_template = ChatPromptTemplate.from_messages(query_decompose_msgs)
 
-async def initial_plan_step(question):
-    queries_output = await (
-        llm.as_structured_llm(SubqueriesOutput)
-        .acomplete(subquery_template.format(question=question))
-        
-    )
-    return {"next_event": "generate_cypher", "arguments": {"plan": queries_output.raw.plan, "question": question}}
 
+async def initial_plan_step(question):
+    queries_output = await llm.as_structured_llm(SubqueriesOutput).acomplete(
+        subquery_template.format(question=question)
+    )
+    return {
+        "next_event": "generate_cypher",
+        "arguments": {"plan": queries_output.raw.plan, "question": question},
+    }

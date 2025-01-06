@@ -1,9 +1,9 @@
+from typing import List, Optional
+
 from llama_index.core import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-from typing import List, Optional
-
-from app.workflows.utils import llm, graph_store
+from app.workflows.utils import graph_store, llm
 
 information_check_system = """You are an expert assistant that evaluates whether a set of subqueries, their results, any existing condensed information, and the current query plan provide enough details to answer a given question. Your task is to:
 
@@ -80,9 +80,10 @@ information_check_msgs = [
 
 information_check_prompt = ChatPromptTemplate.from_messages(information_check_msgs)
 
+
 class IFOutput(BaseModel):
     """
-    Represents the output of an information sufficiency evaluation process. 
+    Represents the output of an information sufficiency evaluation process.
     Contains either a condensed summary of the available information or additional subqueries needed to answer the original question.
     """
 
@@ -93,38 +94,51 @@ class IFOutput(BaseModel):
         description="Modified version of the remaining plan steps. Each group contains queries that can be executed in parallel. Null if no remaining plan exists, all gaps have been addressed, or the task is unsolvable due to missing critical information."
     )
 
+
 def format_subqueries_for_prompt(information_checks: list) -> str:
     """
     Converts a list of InformationCheck objects into a string that can be added to a prompt.
-    
+
     Args:
         information_checks (List[InformationCheck]): List of information checks to process.
-    
+
     Returns:
         str: A formatted string representing subqueries and their results.
     """
     subqueries_and_results = []
-    
+
     for check in information_checks:
         # Extract the first result if available, otherwise use "No result available."
         result = (
-            check.database_output[0] if check.database_output else "No result available."
+            check.database_output[0]
+            if check.database_output
+            else "No result available."
         )
         subqueries_and_results.append(
             f"- Subquery: {check.subquery}\n  Result: {result}"
         )
-    
+
     return "\n".join(subqueries_and_results)
 
-async def information_check_step(subquery_events, original_question, dynamic_notebook, plan):
+
+async def information_check_step(
+    subquery_events, original_question, dynamic_notebook, plan
+):
     subqueries = format_subqueries_for_prompt(subquery_events)
     print(f"Before: {dynamic_notebook}")
     print(f"Plan: {plan}")
-    llm_output =  await (
-        llm.as_structured_llm(IFOutput)
-        .acomplete(information_check_prompt.format(subqueries=subqueries, original_question=original_question, dynamic_notebook=dynamic_notebook, plan=plan))
+    llm_output = await llm.as_structured_llm(IFOutput).acomplete(
+        information_check_prompt.format(
+            subqueries=subqueries,
+            original_question=original_question,
+            dynamic_notebook=dynamic_notebook,
+            plan=plan,
+        )
     )
     llm_output = llm_output.raw
     print(f"After: {llm_output.dynamic_notebook}")
     print(f"New Plan: {llm_output.modified_plan}")
-    return {'dynamic_notebook': llm_output.dynamic_notebook, 'modified_plan': llm_output.modified_plan}
+    return {
+        "dynamic_notebook": llm_output.dynamic_notebook,
+        "modified_plan": llm_output.modified_plan,
+    }

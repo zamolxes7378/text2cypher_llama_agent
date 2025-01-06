@@ -1,11 +1,14 @@
-import os
-import json
-import markdown2
-import functools
 import asyncio
-from openai import OpenAI
+import functools
+import json
+import os
+
+import markdown2
 from fastapi import Request
+from openai import OpenAI
+
 from app.settings import WORKFLOW_MAP
+
 
 def is_partial_request(request: Request):
     if not request.headers.get("hx-request", None):
@@ -13,6 +16,7 @@ def is_partial_request(request: Request):
             status_code=status.HTTP_307_TEMPORARY_REDIRECT,
             headers={"Location": "/"},
         )
+
 
 async def run_workflow(workflow: str, context: dict):
     workflow_class: Type[Workflow] = WORKFLOW_MAP.get(workflow)
@@ -25,11 +29,13 @@ async def run_workflow(workflow: str, context: dict):
 
     async for ev in handler.stream_events():
         if type(ev).__name__ != "StopEvent":
-            event_data = json.dumps({
-                'uuid': str(ev.uuid),
-                'event_type': type(ev).__name__,
-                'result': ev.result
-            })
+            event_data = json.dumps(
+                {
+                    "uuid": str(ev.uuid),
+                    "event_type": type(ev).__name__,
+                    "result": ev.result,
+                }
+            )
             yield f"data: {event_data}\n\n"
 
     result = await handler

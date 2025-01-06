@@ -1,9 +1,11 @@
-from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore
-from llama_index.llms.gemini import Gemini
 from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.graph_stores.neo4j import (
+    CypherQueryCorrector,
+    Neo4jPropertyGraphStore,
+    Schema,
+)
+from llama_index.llms.gemini import Gemini
 from llama_index.llms.openai import OpenAI
-from llama_index.graph_stores.neo4j import CypherQueryCorrector, Schema
-
 
 graph_store = Neo4jPropertyGraphStore(
     username="recommendations",
@@ -12,7 +14,7 @@ graph_store = Neo4jPropertyGraphStore(
     url="neo4j+s://demo.neo4jlabs.com:7687",
     enhanced_schema=True,
     create_indexes=False,
-    timeout=10
+    timeout=10,
 )
 """
 llm = Gemini(

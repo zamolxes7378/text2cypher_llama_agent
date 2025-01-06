@@ -1,10 +1,10 @@
-from app.workflows.utils import llm, graph_store, cypher_query_corrector
-
-from neo4j.exceptions import CypherSyntaxError
+from typing import List, Optional
 
 from llama_index.core import ChatPromptTemplate
+from neo4j.exceptions import CypherSyntaxError
 from pydantic import BaseModel, Field
-from typing import List, Optional
+
+from app.workflows.utils import cypher_query_corrector, graph_store, llm
 
 validate_cypher_system = """You are a specialized parser focused on analyzing Cypher query statements to extract node property filters. Your task is to identify and extract properties used in WHERE clauses and pattern matching conditions, but only when they contain explicit literal values.
 
@@ -88,6 +88,7 @@ validate_cypher_msgs = [
 
 validate_cypher_prompt = ChatPromptTemplate.from_messages(validate_cypher_msgs)
 
+
 class Property(BaseModel):
     """
     Represents a filter condition based on a specific node property in a graph in a Cypher statement.
@@ -106,9 +107,11 @@ class ValidateCypherOutput(BaseModel):
     """
     Represents the applied filters of a Cypher query's output.
     """
+
     filters: Optional[List[Property]] = Field(
         description="A list of property-based filters applied in the Cypher statement."
     )
+
 
 def validate_cypher_step(question, cypher):
     """
@@ -126,7 +129,7 @@ def validate_cypher_step(question, cypher):
     if not corrected_cypher:
         errors.append("The generated Cypher statement doesn't fit the graph schema")
     # Use LLM for mapping for values
-    llm_output =   (
+    llm_output = (
         llm.as_structured_llm(ValidateCypherOutput)
         .complete(validate_cypher_prompt.format(cypher=cypher))
         .raw
@@ -146,7 +149,7 @@ def validate_cypher_step(question, cypher):
                     == "STRING"
                 ):
                     continue
-            except: # if property is hallucinated/doesn't exist in the schema # ToDo handle it better
+            except:  # if property is hallucinated/doesn't exist in the schema # ToDo handle it better
                 continue
             mapping = graph_store.structured_query(
                 f"MATCH (n:{filter.node_label}) WHERE toLower(n.`{filter.property_key}`) = toLower($value) RETURN 'yes' LIMIT 1",

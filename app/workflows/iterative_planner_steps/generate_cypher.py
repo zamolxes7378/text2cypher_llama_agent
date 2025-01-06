@@ -1,8 +1,7 @@
+from llama_index.core import ChatPromptTemplate, VectorStoreIndex
 from llama_index.core.schema import TextNode
-from llama_index.core import VectorStoreIndex
-from llama_index.core import ChatPromptTemplate
 
-from app.workflows.utils import llm, graph_store, embed_model
+from app.workflows.utils import embed_model, graph_store, llm
 
 examples = [
     {
@@ -41,7 +40,9 @@ examples = [
 
 few_shot_nodes = []
 for line in examples:
-    few_shot_nodes.append(TextNode(text=f"{{'query':{line['query']}, 'question': {line['question']}))"))
+    few_shot_nodes.append(
+        TextNode(text=f"{{'query':{line['query']}, 'question': {line['question']}))")
+    )
 
 few_shot_index = VectorStoreIndex(few_shot_nodes, embed_model=embed_model)
 few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
@@ -49,6 +50,7 @@ few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
 
 def get_fewshots(question):
     return [el.text for el in few_shot_retriever.retrieve(question)]
+
 
 generate_system = """Given an input question, convert it to a Cypher query. No pre-amble.
 Do not wrap the response in any backticks or anything else. Respond with a Cypher statement only!"""
@@ -77,7 +79,12 @@ text2cypher_prompt = ChatPromptTemplate.from_messages(generate_cypher_msgs)
 
 schema = graph_store.get_schema_str(exclude_types=["Actor", "Director"])
 
+
 async def generate_cypher_step(subquery):
     fewshot_examples = get_fewshots(subquery)
-    resp = await llm.achat(text2cypher_prompt.format_messages(question=subquery, schema=schema, fewshot_examples=fewshot_examples))
+    resp = await llm.achat(
+        text2cypher_prompt.format_messages(
+            question=subquery, schema=schema, fewshot_examples=fewshot_examples
+        )
+    )
     return resp.message.content
