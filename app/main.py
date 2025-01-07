@@ -7,15 +7,15 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.settings import WORKFLOW_MAP
-from app.utils import run_workflow
+from app.utils import https_url_for, run_workflow
 
 load_dotenv()
 
+templates = Jinja2Templates(directory="templates")
+templates.env.globals["https_url_for"] = https_url_for
+
 app = FastAPI()
 app.mount("/static", StaticFiles(directory="static"), name="static")
-
-
-templates = Jinja2Templates(directory="templates")
 
 
 @app.get("/", response_class=HTMLResponse)

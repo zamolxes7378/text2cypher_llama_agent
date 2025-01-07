@@ -6,14 +6,9 @@
 :root {
   --small-spacing: 5px;
   --default-spacing: 10px;
-}
-
-:root[color-mode="white"] {
   --primary-color: black;
   --background-color: white;
 }
-
-/* Common */
 
 * {
   box-sizing: border-box;

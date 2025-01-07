@@ -1,23 +1,18 @@
-import asyncio
-import functools
 import json
-import os
-
-import markdown2
+from typing import Any
 from fastapi import Request
-from openai import OpenAI
+
 
 from app.settings import WORKFLOW_MAP
 
 
-def is_partial_request(request: Request):
-    if not request.headers.get("hx-request", None):
-        raise HTTPException(
-            status_code=status.HTTP_307_TEMPORARY_REDIRECT,
-            headers={"Location": "/"},
-        )
+# function to force HTTPS
+def https_url_for(request: Request, name: str, **path_params: Any) -> str:
+    http_url = request.url_for(name, **path_params)
+    return http_url.replace("http", "https", 1)
 
 
+# run workflow that is present in app/workflows folder
 async def run_workflow(workflow: str, context: dict):
     workflow_class: Type[Workflow] = WORKFLOW_MAP.get(workflow)
     if not workflow_class:
