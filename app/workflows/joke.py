@@ -1,4 +1,3 @@
-import asyncio
 import os
 from uuid import uuid4
 
@@ -58,7 +57,6 @@ class JokeWorkflow(Workflow):
         async for response in gen:
             critique_event.result = response.delta
             ctx.write_event_to_stream(critique_event)
-            await asyncio.sleep(0.05)
 
         stop_event = StopEvent(result="Workflow completed.")
 
