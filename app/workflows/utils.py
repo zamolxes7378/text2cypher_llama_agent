@@ -22,7 +22,7 @@ llm = Gemini(
     api_key=""
 )
 """
-llm = OpenAI(model="gpt-4o-2024-11-20", temperature=0)
+default_llm = OpenAI(model="gpt-4o-2024-11-20", temperature=0)
 
 embed_model = OpenAIEmbedding(model="text-embedding-3-small")
 

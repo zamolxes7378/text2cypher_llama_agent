@@ -3,8 +3,6 @@ from typing import List
 from llama_index.core import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-from app.workflows.utils import llm
-
 
 class SubqueriesOutput(BaseModel):
     """Defines the output format for transforming a question into parallel-optimized retrieval steps."""
@@ -70,7 +68,7 @@ query_decompose_msgs = [("system", subqueries_system), ("user", "{question}")]
 subquery_template = ChatPromptTemplate.from_messages(query_decompose_msgs)
 
 
-async def initial_plan_step(question):
+async def initial_plan_step(llm, question):
     queries_output = await llm.as_structured_llm(SubqueriesOutput).acomplete(
         subquery_template.format(question=question)
     )

@@ -15,7 +15,7 @@ from app.workflows.naive_text2cypher_steps import (
     generate_cypher_step,
     naive_final_answer_prompt,
 )
-from app.workflows.utils import graph_store, llm
+from app.workflows.utils import default_llm, graph_store
 
 
 class SummarizeEvent(Event):
@@ -38,6 +38,10 @@ class CorrectCypherEvent(Event):
 class NaiveText2CypherRetryFlow(Workflow):
     max_retries = 1
 
+    def __init__(self, llm=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)  # Call the parent init
+        self.llm = llm or default_llm  # Add child-specific logic
+
     @step
     async def generate_cypher(self, ctx: Context, ev: StartEvent) -> ExecuteCypherEvent:
         # Init global vars
@@ -45,7 +49,7 @@ class NaiveText2CypherRetryFlow(Workflow):
 
         question = ev.input
 
-        cypher_query = await generate_cypher_step(question)
+        cypher_query = await generate_cypher_step(self.llm, question)
 
         ctx.write_event_to_stream(
             StringEvent(
@@ -81,12 +85,12 @@ class NaiveText2CypherRetryFlow(Workflow):
     async def correct_cypher_step(
         self, ctx: Context, ev: CorrectCypherEvent
     ) -> ExecuteCypherEvent:
-        results = await correct_cypher_step(ev.question, ev.cypher, ev.error)
+        results = await correct_cypher_step(self.llm, ev.question, ev.cypher, ev.error)
         return ExecuteCypherEvent(question=ev.question, cypher=results)
 
     @step
     async def summarize_answer(self, ctx: Context, ev: SummarizeEvent) -> StopEvent:
-        gen = await llm.astream_chat(
+        gen = await self.llm.astream_chat(
             naive_final_answer_prompt.format_messages(
                 context=ev.context, question=ev.question, cypher_query=ev.cypher
             )

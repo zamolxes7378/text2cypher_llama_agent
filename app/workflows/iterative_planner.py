@@ -12,7 +12,7 @@ from llama_index.core.workflow import (
 
 from app.workflows.frontend_events import StringEvent
 from app.workflows.iterative_planner_steps import *
-from app.workflows.utils import graph_store, llm
+from app.workflows.utils import default_llm, graph_store
 
 MAX_INFORMATION_CHECKS = 3
 
@@ -52,6 +52,10 @@ class FinalAnswer(Event):
 
 
 class IterativePlanningFlow(Workflow):
+    def __init__(self, llm=None, *args, **kwargs):
+        super().__init__(*args, **kwargs)  # Call the parent init
+        self.llm = llm or default_llm  # Add child-specific logic
+
     @step
     async def start(self, ctx: Context, ev: StartEvent) -> InitialPlan | FinalAnswer:
         original_question = ev.input
@@ -63,7 +67,7 @@ class IterativePlanningFlow(Workflow):
             "subqueries_cypher_history", {}
         )  # History of which queries were executed
         # LLM call
-        guardrails_output = guardrails_step(original_question)
+        guardrails_output = await guardrails_step(self.llm, original_question)
         if guardrails_output.get("next_event") == "generate_final_answer":
             context = "The question is not about movies or cast, so I cannot answer the question"
             final_answer = FinalAnswer(context=context)
@@ -75,7 +79,7 @@ class IterativePlanningFlow(Workflow):
     async def initial_plan(self, ctx: Context, ev: InitialPlan) -> GenerateCypher:
         original_question = ev.question
         # store in global context
-        initial_plan_output = await initial_plan_step(original_question)
+        initial_plan_output = await initial_plan_step(self.llm, original_question)
         subqueries = initial_plan_output["arguments"].get("plan")
 
         ctx.write_event_to_stream(
@@ -99,7 +103,7 @@ class IterativePlanningFlow(Workflow):
         self, ctx: Context, ev: GenerateCypher
     ) -> ValidateCypher:
         # print("Running generate_cypher ", ev.subquery)
-        generated_cypher = await generate_cypher_step(ev.subquery)
+        generated_cypher = await generate_cypher_step(self.llm, ev.subquery)
         return ValidateCypher(subquery=ev.subquery, generated_cypher=generated_cypher)
 
     @step(num_workers=4)
@@ -107,7 +111,7 @@ class IterativePlanningFlow(Workflow):
         self, ctx: Context, ev: ValidateCypher
     ) -> FinalAnswer | ExecuteCypher | CorrectCypher:
         # print("Running validate_cypher ", ev)
-        results = validate_cypher_step(ev.subquery, ev.generated_cypher)
+        results = await validate_cypher_step(self.llm, ev.subquery, ev.generated_cypher)
         if results["next_action"] == "end":  # DB value mapping
             return FinalAnswer(context=str(results["mapping_errors"]))
         if results["next_action"] == "execute_cypher":
@@ -125,7 +129,7 @@ class IterativePlanningFlow(Workflow):
     async def correct_cypher_step(
         self, ctx: Context, ev: CorrectCypher
     ) -> ValidateCypher:
-        results = await correct_cypher_step(ev.subquery, ev.cypher, ev.errors)
+        results = await correct_cypher_step(self.llm, ev.subquery, ev.cypher, ev.errors)
         return ValidateCypher(subquery=ev.subquery, generated_cypher=results)
 
     @step
@@ -183,7 +187,7 @@ class IterativePlanningFlow(Workflow):
         # Do the information check
 
         data = await information_check_step(
-            result, original_question, dynamic_notebook, plan
+            self.llm, result, original_question, dynamic_notebook, plan
         )
         # Get count of information checks done
         information_checks = await ctx.get("information_checks")
@@ -211,7 +215,7 @@ class IterativePlanningFlow(Workflow):
         original_question = await ctx.get("original_question")
         subqueries_cypher_history = await ctx.get("subqueries_cypher_history")
         # wait until we receive all events
-        gen = await llm.astream_chat(
+        gen = await self.llm.astream_chat(
             final_answer_prompt.format_messages(
                 context=ev.context, question=original_question
             )

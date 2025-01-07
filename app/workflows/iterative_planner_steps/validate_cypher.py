@@ -4,7 +4,7 @@ from llama_index.core import ChatPromptTemplate
 from neo4j.exceptions import CypherSyntaxError
 from pydantic import BaseModel, Field
 
-from app.workflows.utils import cypher_query_corrector, graph_store, llm
+from app.workflows.utils import cypher_query_corrector, graph_store
 
 validate_cypher_system = """You are a specialized parser focused on analyzing Cypher query statements to extract node property filters. Your task is to identify and extract properties used in WHERE clauses and pattern matching conditions, but only when they contain explicit literal values.
 
@@ -113,7 +113,7 @@ class ValidateCypherOutput(BaseModel):
     )
 
 
-def validate_cypher_step(question, cypher):
+async def validate_cypher_step(llm, question, cypher):
     """
     Validates the Cypher statements and maps any property values to the database.
     """
@@ -129,11 +129,10 @@ def validate_cypher_step(question, cypher):
     if not corrected_cypher:
         errors.append("The generated Cypher statement doesn't fit the graph schema")
     # Use LLM for mapping for values
-    llm_output = (
-        llm.as_structured_llm(ValidateCypherOutput)
-        .complete(validate_cypher_prompt.format(cypher=cypher))
-        .raw
+    llm_output = await llm.as_structured_llm(ValidateCypherOutput).acomplete(
+        validate_cypher_prompt.format(cypher=cypher)
     )
+    llm_output = llm_output.raw
     if llm_output.filters:
         for filter in llm_output.filters:
             # Do mapping only for string values

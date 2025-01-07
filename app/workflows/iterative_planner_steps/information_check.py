@@ -3,8 +3,6 @@ from typing import List, Optional
 from llama_index.core import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-from app.workflows.utils import graph_store, llm
-
 information_check_system = """You are an expert assistant that evaluates whether a set of subqueries, their results, any existing condensed information, and the current query plan provide enough details to answer a given question. Your task is to:
 
 1. Analyze if the available information is sufficient to answer the original question: "{original_question}".
@@ -122,7 +120,7 @@ def format_subqueries_for_prompt(information_checks: list) -> str:
 
 
 async def information_check_step(
-    subquery_events, original_question, dynamic_notebook, plan
+    llm, subquery_events, original_question, dynamic_notebook, plan
 ):
     subqueries = format_subqueries_for_prompt(subquery_events)
     print(f"Before: {dynamic_notebook}")

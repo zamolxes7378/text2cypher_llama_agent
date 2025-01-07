@@ -3,8 +3,6 @@ from typing import Literal
 from llama_index.core import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-from app.workflows.utils import llm
-
 
 class Guardrail(BaseModel):
     """Guardrail"""
@@ -29,12 +27,11 @@ chat_refine_msgs = [
 guardrails_template = ChatPromptTemplate.from_messages(chat_refine_msgs)
 
 
-def guardrails_step(question):
-    guardrails_output = (
-        llm.as_structured_llm(Guardrail)
-        .complete(guardrails_template.format(question=question))
-        .raw
-    ).decision
+async def guardrails_step(llm, question):
+    guardrails_output = await llm.as_structured_llm(Guardrail).acomplete(
+        guardrails_template.format(question=question)
+    )
+    guardrails_output = guardrails_output.raw.decision
     if guardrails_output == "end":
         context = "The question is not about movies or their case, so I cannot answer this question"
         return {

@@ -4,43 +4,35 @@ Which movie starring Keanu Reeves has the most actors in common with a Tom Hanks
 (tom:Actor {name: ""Tom Hanks""})-[:ACTED_IN]->(tomMovie:Movie)<-[:ACTED_IN]-(commonActor)
 RETURN megMovie.title AS Movie, COUNT(DISTINCT commonActor) AS CommonActors
 ORDER BY CommonActors DESC
-LIMIT 1
-"
+LIMIT 1"
 Who directed the most recent movie starring Halle Berry, and which other actors starred in that director’s earlier movies?;"MATCH (p:Person {name: ""Halle Berry""})-[:ACTED_IN]->(m:Movie)<-[:DIRECTED]-(d:Person)
 WITH d, m
 ORDER BY m.released DESC
 LIMIT 1
 MATCH (d)-[:DIRECTED]->(earlier:Movie)<-[:ACTED_IN]-(a:Person)
 WHERE earlier <> m
-RETURN d.name AS director, m.title AS mostRecentMovie, COLLECT(DISTINCT a.name) AS otherActorsInEarlierMovies
-"
-What is the highest-rated movie from the 1990s, who directed it, and which other films did that director make?;"MATCH (m:Movie)-[:DIRECTED]-(d:Person) WHERE m.year >= 1990 AND m.year < 2000 WITH m, d ORDER BY m.imdbRating DESC LIMIT 1 MATCH (d)-[:DIRECTED]->(other:Movie) WHERE other <> m RETURN m.title AS highestRatedMovie, m.imdbRating AS rating, d.name AS director, COLLECT(other.title) AS otherMovies
-"
+RETURN d.name AS director, m.title AS mostRecentMovie, COLLECT(DISTINCT a.name) AS otherActorsInEarlierMovies"
+What is the highest-rated movie from the 1990s, who directed it, and which other films did that director make?;MATCH (m:Movie)-[:DIRECTED]-(d:Person) WHERE m.year >= 1990 AND m.year < 2000 WITH m, d ORDER BY m.imdbRating DESC LIMIT 1 MATCH (d)-[:DIRECTED]->(other:Movie) WHERE other <> m RETURN m.title AS highestRatedMovie, m.imdbRating AS rating, d.name AS director, COLLECT(other.title) AS otherMovies
 For all movies starring Keanu Reeves, find the director who worked the most times with him and list the co-stars across those collaborations.;"MATCH (keanu:Person {name: ""Keanu Reeves""})-[:ACTED_IN]->(:Movie)<-[:DIRECTED]-(d:Person)
 WITH keanu, d, count(*) AS collaborations
 ORDER BY collaborations DESC LIMIT 1
 MATCH (d)-[:DIRECTED]->(m)<-[:ACTED_IN]-(others)
-RETURN d.name AS director, collaborations, collect(distinct m.title) AS titles, collect(distinct others.name) AS costars
-"
+RETURN d.name AS director, collaborations, collect(distinct m.title) AS titles, collect(distinct others.name) AS costars"
 Find the actor who has starred with all from the list of Tom Hanks, Meg Ryan, and Bruce Willis!;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(p:Person) WHERE p.name IN ['Tom Hanks', 'Meg Ryan', 'Bruce Willis']
 WITH a, size(collect(distinct p)) AS count
 // acted with all three
 WHERE count = 3
-RETURN a.name
-"
+RETURN a.name"
 Which horror movie has the highest rating, who directed it, and which actors are in?;"MATCH (d)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: ""Horror""}),
 (a)-[:ACTED_IN]->(m)
 WHERE m.imdbRating IS NOT NULL
 RETURN m.title AS movieTitle, m.imdbRating AS rating, d.name AS director, COLLECT(a.name) AS actors
-ORDER BY m.imdbRating DESC LIMIT 1
-"
-Find the director of the drama movie that has the longest runtime, and list all their movies that are under two hours.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Drama'}) WITH d, m ORDER BY m.runtime DESC LIMIT 1 MATCH (d)-[:DIRECTED]->(shortMovies:Movie) WHERE shortMovies.runtime < 120 RETURN d.name AS director, shortMovies.title AS movieTitle
-"
+ORDER BY m.imdbRating DESC LIMIT 1"
+Find the director of the drama movie that has the longest runtime, and list all their movies that are under two hours.;MATCH (d:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Drama'}) WITH d, m ORDER BY m.runtime DESC LIMIT 1 MATCH (d)-[:DIRECTED]->(shortMovies:Movie) WHERE shortMovies.runtime < 120 RETURN d.name AS director, shortMovies.title AS movieTitle
 Which 3 actors have starred the most in both a comedy and a thriller?;"MATCH (a:Person)-[:ACTED_IN]->(:Movie)-[:IN_GENRE]->(g1:Genre)
 WHERE g1.name in ['Comedy', 'Thriller']
 RETURN a.name, count(*) AS count, collect(distinct g1.name) as genres
-ORDER BY count DESC LIMIT 3
-"
+ORDER BY count DESC LIMIT 3"
 Which pair of actors have starred in the largest number of movies together and who directed most of those collaborations?;"MATCH (a1:Actor)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(a2:Actor)
 WHERE id(a1) < id(a2)
 WITH a1, a2, COUNT(m) AS collaborations
@@ -48,48 +40,39 @@ ORDER BY collaborations DESC
 LIMIT 1
 MATCH (a1)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(a2),
 (d:Director)-[:DIRECTED]->(m)
-RETURN a1.name AS Actor1, a2.name AS Actor2, collect(distinct d.name) AS Director, COUNT(m) AS DirectedMovies, collaborations
-
-"
+RETURN a1.name AS Actor1, a2.name AS Actor2, collect(distinct d.name) AS Director, COUNT(m) AS DirectedMovies, collaborations"
 Name the actor who starred with Harrison Ford in at least two movies.;"MATCH (actor:Actor)-[:ACTED_IN]->(m:Movie)<-[:ACTED_IN]-(harrison:Actor {name: ""Harrison Ford""})
 WITH actor, COUNT(m) AS movieCount
 WHERE movieCount >= 2
-RETURN actor.name
-"
+RETURN actor.name"
 Which actors appear in both a movie directed by Quentin Tarantino and another directed by the Randal Kleiser.;"MATCH (actor:Actor)-[:ACTED_IN]->(movie1:Movie)<-[:DIRECTED]-(director1:Director {name: ""Quentin Tarantino""}),
 (actor)-[:ACTED_IN]->(movie2:Movie)<-[:DIRECTED]-(director2:Director {name:""Randal Kleiser""})
-RETURN DISTINCT actor.name
-"
+RETURN DISTINCT actor.name"
 Which actors have starred in movies rated below 5 and also in movies rated above 9?;"MATCH (a:Actor)-[:ACTED_IN]->(m1:Movie)
 WHERE m1.imdbRating < 5
 MATCH (a)-[:ACTED_IN]->(m2:Movie)
 WHERE m2.imdbRating > 9
-RETURN DISTINCT a.name
-"
+RETURN DISTINCT a.name"
 Among comedy films that grossed over $100 million, which one features the oldest actor.;"MATCH (m:Movie)-[:IN_GENRE]->(g:Genre {name: ""Comedy""}), 
       (a:Actor)-[:ACTED_IN]->(m)
 WHERE m.revenue > 100000000
 RETURN m.title, a.name, a.born
 ORDER BY a.born
-LIMIT 1
-"
+LIMIT 1"
 Which directors have themselves acted in at least three of their own movies?;"MATCH (d:Director)-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(d)
 WITH d, COUNT(m) AS actedInCount
 WHERE actedInCount >= 3
-RETURN d.name
-"
+RETURN d.name"
 What is the most common language among movies with a budget lower than 10 million dollars?;"MATCH (m:Movie)
 WHERE m.budget < 10000000
 UNWIND m.languages AS language
 RETURN language, COUNT(language) AS frequency
 ORDER BY frequency DESC
-LIMIT 1
-"
+LIMIT 1"
 Identify the first 3 genres most frequently linked to movies directed by 'Steven Spielberg'.;"MATCH (d:Director {name: 'Steven Spielberg'})-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre)
 RETURN g.name, COUNT(*) AS genreCount
 ORDER BY genreCount DESC
-LIMIT 3
-"
+LIMIT 3"
 List the top 5 oldest actors in the database.;MATCH (a:Actor) WHERE a.born IS NOT NULL RETURN a.name, a.born ORDER BY a.born ASC LIMIT 5
 List the top 5 movies with the most IMDb votes.;MATCH (m:Movie) RETURN m.title, m.imdbVotes ORDER BY m.imdbVotes DESC LIMIT 5
 Which 3 movies have the highest revenue to budget ratio?;MATCH (m:Movie) WHERE m.budget IS NOT NULL AND m.revenue IS NOT NULL RETURN m.title AS movie, toFloat(m.revenue) / m.budget AS revenueToBudgetRatio ORDER BY revenueToBudgetRatio DESC LIMIT 3
@@ -101,24 +84,20 @@ What are the top 5 movies with the highest number of countries involved?;MATCH (
 List the top 5 actors by number of different genres they've acted in.;MATCH (a:Actor)-[:ACTED_IN]->(m:Movie)-[:IN_GENRE]->(g:Genre) WITH a, count(distinct g) AS genreCount ORDER BY genreCount DESC LIMIT 5 RETURN a.name AS actor, genreCount AS numberOfGenres
 List movies directed by ‘Quentin Tarantino'.;MATCH (d:Director {name: Quentin Tarantino’})-[:DIRECTED]->(m:Movie) RETURN m LIMIT 3
 Which actor has the highest average IMDb rating across all of their movies released in the 21st century?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie) WHERE m.year >= 2000 AND m.imdbRating IS NOT NULL
-RETURN a.name, AVG(m.imdbRating) AS avgRating ORDER BY avgRating DESC LIMIT 1
-"
+RETURN a.name, AVG(m.imdbRating) AS avgRating ORDER BY avgRating DESC LIMIT 1"
 Who is the oldest actor to have portrayed a Marvel superhero, and which movie did they appear in last?;
 Among directors who have directed both horror and comedy films, which one has the highest combined revenue?;"MATCH (d:Person)-[:DIRECTED]->(m1:Movie)-[:IN_GENRE]->(g1:Genre) WHERE g1.name in ['Horror', 'Comedy']
 WITH d, SUM(m1.revenue) AS totalRevenue, collect(distinct g1.name) AS genres
 WHERE size(genres) = 2 // making sure directed both horror and comedy
-RETURN d.name, totalRevenue ORDER BY totalRevenue DESC LIMIT 1
-"
+RETURN d.name, totalRevenue ORDER BY totalRevenue DESC LIMIT 1"
 Which actor has been directed the most times by Martin Scorsese, and for each collaboration, what was the movie’s IMDb rating?;"MATCH (d:Person {name: 'Martin Scorsese'})-[:DIRECTED]->(m:Movie)<-[:ACTED_IN]-(a:Person)
 RETURN a.name, COUNT(m) AS collaborationCount, COLLECT({movie: m.title, imdbRating: m.imdbRating}) AS movies
-ORDER BY collaborationCount DESC LIMIT 1
-"
+ORDER BY collaborationCount DESC LIMIT 1"
 Find the director whose debut movie achieved the highest score.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
 WHERE m.imdbRating IS NOT NULL
 WITH d, m ORDER BY m.year ASC
 WITH d, COLLECT(m)[0] AS debutMovie
-RETURN d.name, debutMovie.title, debutMovie.imdbRating ORDER BY debutMovie.imdbRating DESC LIMIT 1
-"
+RETURN d.name, debutMovie.title, debutMovie.imdbRating ORDER BY debutMovie.imdbRating DESC LIMIT 1"
 Which actor or actress made their debut in the highest-grossing comedy film of the 1980s?;"MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
 WHERE g.name = 'Comedy' AND m.year >= 1980 AND m.year < 1990 AND m.revenue IS NOT NULL
 WITH m ORDER BY m.revenue DESC LIMIT 1
@@ -127,36 +106,30 @@ WHERE NOT EXISTS {
 MATCH (actor)-[:ACTED_IN]->(otherMovie:Movie)
 WHERE otherMovie.year < m.year
 }
-RETURN m.title, actor.name
-"
+RETURN m.title, actor.name"
 Which movie from the 2010s has the largest difference between revenue and budget, which countries produced it, and who directed it?;"MATCH (m:Movie)-[:IN_GENRE]->(g:Genre), (p:Person)-[:DIRECTED]->(m)
 WHERE m.year >= 2010 AND m.year < 2020 AND m.revenue IS NOT NULL and m.budget IS NOT NULL
 WITH m, p, (m.revenue - m.budget) AS profit
 ORDER BY profit DESC LIMIT 1
-RETURN m.title AS movie, profit AS largestDifference, m.countries AS countries, p.name AS director
-"
+RETURN m.title AS movie, profit AS largestDifference, m.countries AS countries, p.name AS director"
 Find the director whose movies have the highest average imdbRating but only considering movies under 100 minutes (runtime < 100).;"MATCH (d:Person)-[:DIRECTED]->(m:Movie) WHERE m.runtime < 100 AND m.imdbRating IS NOT NULL
 WITH d, avg(m.imdbRating) AS avgRating, collect(m.title) AS movies
 ORDER BY avgRating DESC LIMIT 1
-RETURN d.name AS director, avgRating, movies
-"
+RETURN d.name AS director, avgRating, movies"
 Which actor has acted in the most languages across their filmography, and list those languages?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie)
 WITH a, apoc.coll.toSet(apoc.coll.flatten(COLLECT(m.languages))) AS allLanguages
 ORDER BY size(allLanguages) DESC LIMIT 1
-RETURN a.name, allLanguages
-"
+RETURN a.name, allLanguages"
 Among all movies with a budget under $5,000,000, which one has the highest imdbRating, and which genres does it belong to?;"MATCH (m:Movie)-[:IN_GENRE]->(g:Genre)
 WHERE m.budget < 5000000 AND m.imdbRating IS NOT NULL
 RETURN m.title, m.imdbRating, COLLECT(g.name) AS genres
-ORDER BY m.imdbRating DESC LIMIT 1
-"
+ORDER BY m.imdbRating DESC LIMIT 1"
 Name the actor who has the largest difference between their earliest year and latest year of acting, and which genres are most common in their filmography?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie)-[:IN_GENRE]->(g:Genre)
 WHERE m.year IS NOT NULL
 WITH a, g.name AS genre, MIN(m.year) AS earliestYear, MAX(m.year) AS latestYear, MAX(m.year) - MIN(m.year) AS yearDifference
 ORDER BY yearDifference DESC LIMIT 1
 WITH a, yearDifference, COLLECT(genre) AS genres
-RETURN a.name AS actor, yearDifference, genres AS mostCommonGenres
-"
+RETURN a.name AS actor, yearDifference, genres AS mostCommonGenres"
 Which director has made at least one movie in each of the following languages: English, French, and Spanish, and name their highest imdbRating film.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
 WITH d, apoc.coll.toSet(apoc.coll.flatten(collect(m.languages))) as languages
 WHERE 'English' IN languages AND
@@ -169,18 +142,15 @@ WHERE movie.imdbRating IS NOT NULL
 RETURN movie.title AS top_movie, movie.imdbRating AS top_rating
 ORDER BY movie.imdbRating DESC LIMIT 1
 }
-RETURN d.name AS director, top_movie, top_rating
-"
+RETURN d.name AS director, top_movie, top_rating"
 Which actor has the highest cumulative revenue across all movies they starred in, ignoring any movie with budget under $1,000,000?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie) WHERE m.budget >= 1000000
-RETURN a.name, SUM(m.revenue) AS totalRevenue ORDER BY totalRevenue DESC LIMIT 1
-"
+RETURN a.name, SUM(m.revenue) AS totalRevenue ORDER BY totalRevenue DESC LIMIT 1"
 Find all directors who released their first movie (released) after the year 2000 and have directed at least one movie with an imdbRating over 8.6. Name those high-rated movies.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
 WITH d, MIN(m.year) AS firstMovieYear
 WHERE firstMovieYear > 2000
 MATCH (d)-[:DIRECTED]->(movie) WHERE movie.imdbRating > 8.6
 WITH d, movie ORDER BY movie.imdbRating DESC
-RETURN d.name as director, movie.title as movie, movie.imdbRating AS rating
-"
+RETURN d.name as director, movie.title as movie, movie.imdbRating AS rating"
 Find the actor who made the most revenue in their debut movie.;"MATCH (a:Actor)-[:ACTED_IN]->(m:Movie)
 WHERE m.revenue IS NOT NULL
 WITH a, m
@@ -188,32 +158,49 @@ ORDER BY m.year ASC
 WITH a, collect(m)[0] AS debutMovie
 RETURN a.name AS actor, debutMovie.title as movie, debutMovie.revenue AS revenue
 ORDER BY revenue DESC
-LIMIT 1
-"
+LIMIT 1"
 Which movie from the 2010s has a cast that includes at least one actor born before 1920?;"MATCH (m:Movie)<-[:ACTED_IN]-(a:Person)
 WHERE m.year >= 2010 AND m.year < 2020 AND a.born < date(""1920-01-01"")
-RETURN m.title AS movie, collect(a.name) AS actor
-"
+RETURN m.title AS movie, collect(a.name) AS actor"
 Find the director who has directed at least one movie every 5 years (based on year) for at least three consecutive intervals, and list those movies.;
 Find the oldest living director who has directed a movie in the 'Documentary' genre.;"MATCH (p:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Documentary'})
 WHERE p.died IS NULL AND p.born IS NOT NULL
-RETURN p.name AS directorName, p.born AS birthDate ORDER BY p.born ASC LIMIT 1
-"
+RETURN p.name AS directorName, p.born AS birthDate ORDER BY p.born ASC LIMIT 1"
 Identify the director who has the highest total revenue across their filmography if we only consider films made in English, and name two of their top-earning films.;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)
 WHERE ""English"" IN m.languages AND m.revenue IS NOT NULL
 WITH d, SUM(m.revenue) AS totalRevenue, COLLECT(m) AS movies
 ORDER BY totalRevenue DESC LIMIT 1 UNWIND movies AS topMovies
 RETURN d.name AS director, totalRevenue, topMovies.title AS movieTitle, topMovies.revenue AS movieRevenue
-ORDER BY movieRevenue DESC LIMIT 2
-"
+ORDER BY movieRevenue DESC LIMIT 2"
 Find the actor who has the broadest range of genres across their filmography.;"MATCH (a:Person)-[:ACTED_IN]->(:Movie)-[:IN_GENRE]->(g:Genre)
 WITH a, COUNT(DISTINCT g.name) AS genreCount
 RETURN a.name, genreCount
 ORDER BY genreCount DESC
+LIMIT 1"
+Who made more movies, Leonardo di Caprio or Tom Hanks most frequent coactor?;"MATCH (leo:Person {name: ""Leonardo DiCaprio""})-[:ACTED_IN]->(m:Movie)
+WITH count(m) AS leoMovies
+MATCH (tom:Person {name: ""Tom Hanks""})-[:ACTED_IN]->(m2:Movie)<-[:ACTED_IN]-(coactor:Person)
+WITH tom, coactor, leoMovies, count(m2) AS coactorMovies
+ORDER BY coactorMovies DESC
 LIMIT 1
+MATCH (coactor)-[:ACTED_IN]->(m3:Movie)
+RETURN leoMovies, coactor.name AS tomHanksCoactor, count(*) AS tomHanksCoactorMovies
 "
-Who made more movies, Leonardo di Caprio or Tom Hanks most frequent coactor?;
-Who has appeared in more movies: Leonardo DiCaprio or the actor who has co-starred most frequently with the director of Tom Hanks' most critically acclaimed movie?;
-Between the highest-grossing movie starring Matt Damon and the highest-grossing movie starring Johnny Depp, which has more co-stars in common with Meryl Streep?;
+Who has appeared in more movies: Leonardo DiCaprio or the actor who has co-starred most frequently with the director of Tom Hanks' most critically acclaimed movie?;RETURN “Missing director of tom hanks most acclaimed movie, so we cannot answer the question” as output
+Between the highest-grossing movie starring Matt Damon and the highest-grossing movie starring Johnny Depp, which has more co-stars in common with Tom Cruise?;"MATCH (matt:Person {name: ""Matt Damon""})-[:ACTED_IN]->(mattMovie)
+WITH mattMovie, [(mattMovie)<-[:ACTED_IN]-(a) | a] AS mattCast
+ORDER by mattMovie.revenue DESC LIMIT 1
+WITH mattCast
+MATCH (john:Person {name: ""Johnny Depp""})-[:ACTED_IN]->(johnMovie)
+WITH mattCast, johnMovie, [(johnMovie)<-[:ACTED_IN]-(a) | a] AS johnCast
+ORDER by johnMovie.revenue DESC LIMIT 1
+WITH mattCast, johnCast
+MATCH (tom:Person {name: ""Tom Cruise""})-[:ACTED_IN]->(tomMovie)<-[:ACTED_IN]-(coStar)
+WITH mattCast, johnCast, COLLECT(DISTINCT coStar) AS tomCoStars
+RETURN
+SIZE([x IN mattCast WHERE x IN tomCoStars]) AS mattCommonActors,
+Size([x IN johnCast WHERE x IN tomCoStars]) AS johnyCommonActors
+
+"
 Which movie has a higher IMDb rating: the oldest film starring the person who directed the most profitable comedy of the 1990s, or the newest film starring the person who directed the least profitable action movie of the 2000s?;
-Among the directors who have acted in at least five different genres, who directed the movie with the greatest difference between its IMDb rating;
+Among the directors who have directed in at least five different genres, who directed the movie with the greatest difference between its IMDb rating;

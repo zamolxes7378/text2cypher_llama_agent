@@ -1,6 +1,6 @@
 from llama_index.core import ChatPromptTemplate
 
-from app.workflows.utils import graph_store, llm
+from app.workflows.utils import graph_store
 
 schema = graph_store.get_schema_str(exclude_types=["Actor", "Director"])
 
@@ -43,10 +43,10 @@ correct_cypher_msgs = [
 correct_cypher_prompt = ChatPromptTemplate.from_messages(correct_cypher_msgs)
 
 
-async def correct_cypher_step(subquery, cypher, errors):
+async def correct_cypher_step(llm, subquery, cypher, errors):
     resp = await llm.achat(
         correct_cypher_prompt.format_messages(
-            question=subquery, schema=schema, errors=errors
+            question=subquery, schema=schema, errors=errors, cypher=cypher
         )
     )
     return resp.message.content

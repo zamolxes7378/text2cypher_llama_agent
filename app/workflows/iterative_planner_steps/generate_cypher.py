@@ -1,7 +1,7 @@
 from llama_index.core import ChatPromptTemplate, VectorStoreIndex
 from llama_index.core.schema import TextNode
 
-from app.workflows.utils import embed_model, graph_store, llm
+from app.workflows.utils import embed_model, graph_store
 
 examples = [
     {
@@ -80,7 +80,7 @@ text2cypher_prompt = ChatPromptTemplate.from_messages(generate_cypher_msgs)
 schema = graph_store.get_schema_str(exclude_types=["Actor", "Director"])
 
 
-async def generate_cypher_step(subquery):
+async def generate_cypher_step(llm, subquery):
     fewshot_examples = get_fewshots(subquery)
     resp = await llm.achat(
         text2cypher_prompt.format_messages(
