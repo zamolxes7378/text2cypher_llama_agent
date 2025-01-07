@@ -1,15 +1,24 @@
 import json
 from typing import Any
 from fastapi import Request
+from jinja2 import pass_context
 
 
 from app.settings import WORKFLOW_MAP
 
 
 # function to force HTTPS
-def https_url_for(request: Request, name: str, **path_params: Any) -> str:
+@pass_context
+def urlx_for(
+    context: dict,
+    name: str,
+    **path_params: Any,
+) -> str:
+    request: Request = context["request"]
     http_url = request.url_for(name, **path_params)
-    return http_url.replace("http", "https", 1)
+    if scheme := request.headers.get("x-forwarded-proto"):
+        return http_url.replace(scheme=scheme)
+    return http_url
 
 
 # run workflow that is present in app/workflows folder
