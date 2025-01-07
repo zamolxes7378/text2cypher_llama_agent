@@ -195,7 +195,7 @@ class IterativePlanningFlow(Workflow):
         if data.get("modified_plan") and information_checks < MAX_INFORMATION_CHECKS:
             ctx.write_event_to_stream(
                 StringEvent(
-                    result=f"Modified plan: {data.get("modified_plan")}",
+                    result=f"Modified plan: {data.get('modified_plan')}",
                     label="Modified plan",
                 )
             )

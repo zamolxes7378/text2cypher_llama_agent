@@ -75,7 +75,13 @@ class NaiveText2CypherFlow(Workflow):
             ctx.write_event_to_stream(final_event)
             await asyncio.sleep(0.05)
 
-        stop_event = StopEvent(result=f"{ev.cypher}<split>{final_answer}")
+        stop_event = StopEvent(
+            result={
+                "cypher": ev.cypher,
+                "question": ev.question,
+                "answer": final_answer,
+            }
+        )
 
         # Return the final result
         return stop_event
