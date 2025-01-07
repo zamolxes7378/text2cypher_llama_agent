@@ -102,7 +102,6 @@ class IterativePlanningFlow(Workflow):
     async def generate_cypher_step(
         self, ctx: Context, ev: GenerateCypher
     ) -> ValidateCypher:
-        # print("Running generate_cypher ", ev.subquery)
         generated_cypher = await generate_cypher_step(self.llm, ev.subquery)
         return ValidateCypher(subquery=ev.subquery, generated_cypher=generated_cypher)
 
@@ -110,7 +109,6 @@ class IterativePlanningFlow(Workflow):
     async def validate_cypher_step(
         self, ctx: Context, ev: ValidateCypher
     ) -> FinalAnswer | ExecuteCypher | CorrectCypher:
-        # print("Running validate_cypher ", ev)
         results = await validate_cypher_step(self.llm, ev.subquery, ev.generated_cypher)
         if results["next_action"] == "end":  # DB value mapping
             return FinalAnswer(context=str(results["mapping_errors"]))

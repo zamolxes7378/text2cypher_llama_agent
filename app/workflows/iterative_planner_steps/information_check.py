@@ -123,8 +123,6 @@ async def information_check_step(
     llm, subquery_events, original_question, dynamic_notebook, plan
 ):
     subqueries = format_subqueries_for_prompt(subquery_events)
-    print(f"Before: {dynamic_notebook}")
-    print(f"Plan: {plan}")
     llm_output = await llm.as_structured_llm(IFOutput).acomplete(
         information_check_prompt.format(
             subqueries=subqueries,
@@ -134,8 +132,6 @@ async def information_check_step(
         )
     )
     llm_output = llm_output.raw
-    print(f"After: {llm_output.dynamic_notebook}")
-    print(f"New Plan: {llm_output.modified_plan}")
     return {
         "dynamic_notebook": llm_output.dynamic_notebook,
         "modified_plan": llm_output.modified_plan,
