@@ -85,7 +85,6 @@ List the top 5 actors by number of different genres they've acted in.;MATCH (a:A
 List movies directed by ‘Quentin Tarantino'.;MATCH (d:Director {name: Quentin Tarantino’})-[:DIRECTED]->(m:Movie) RETURN m LIMIT 3
 Which actor has the highest average IMDb rating across all of their movies released in the 21st century?;"MATCH (a:Person)-[:ACTED_IN]->(m:Movie) WHERE m.year >= 2000 AND m.imdbRating IS NOT NULL
 RETURN a.name, AVG(m.imdbRating) AS avgRating ORDER BY avgRating DESC LIMIT 1"
-Who is the oldest actor to have portrayed a Marvel superhero, and which movie did they appear in last?;
 Among directors who have directed both horror and comedy films, which one has the highest combined revenue?;"MATCH (d:Person)-[:DIRECTED]->(m1:Movie)-[:IN_GENRE]->(g1:Genre) WHERE g1.name in ['Horror', 'Comedy']
 WITH d, SUM(m1.revenue) AS totalRevenue, collect(distinct g1.name) AS genres
 WHERE size(genres) = 2 // making sure directed both horror and comedy
@@ -162,7 +161,6 @@ LIMIT 1"
 Which movie from the 2010s has a cast that includes at least one actor born before 1920?;"MATCH (m:Movie)<-[:ACTED_IN]-(a:Person)
 WHERE m.year >= 2010 AND m.year < 2020 AND a.born < date(""1920-01-01"")
 RETURN m.title AS movie, collect(a.name) AS actor"
-Find the director who has directed at least one movie every 5 years (based on year) for at least three consecutive intervals, and list those movies.;
 Find the oldest living director who has directed a movie in the 'Documentary' genre.;"MATCH (p:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: 'Documentary'})
 WHERE p.died IS NULL AND p.born IS NOT NULL
 RETURN p.name AS directorName, p.born AS birthDate ORDER BY p.born ASC LIMIT 1"
@@ -184,8 +182,7 @@ WITH tom, coactor, leoMovies, count(m2) AS coactorMovies
 ORDER BY coactorMovies DESC
 LIMIT 1
 MATCH (coactor)-[:ACTED_IN]->(m3:Movie)
-RETURN leoMovies, coactor.name AS tomHanksCoactor, count(*) AS tomHanksCoactorMovies
-"
+RETURN leoMovies, coactor.name AS tomHanksCoactor, count(*) AS tomHanksCoactorMovies"
 Who has appeared in more movies: Leonardo DiCaprio or the actor who has co-starred most frequently with the director of Tom Hanks' most critically acclaimed movie?;RETURN “Missing director of tom hanks most acclaimed movie, so we cannot answer the question” as output
 Between the highest-grossing movie starring Matt Damon and the highest-grossing movie starring Johnny Depp, which has more co-stars in common with Tom Cruise?;"MATCH (matt:Person {name: ""Matt Damon""})-[:ACTED_IN]->(mattMovie)
 WITH mattMovie, [(mattMovie)<-[:ACTED_IN]-(a) | a] AS mattCast
@@ -199,8 +196,29 @@ MATCH (tom:Person {name: ""Tom Cruise""})-[:ACTED_IN]->(tomMovie)<-[:ACTED_IN]-(
 WITH mattCast, johnCast, COLLECT(DISTINCT coStar) AS tomCoStars
 RETURN
 SIZE([x IN mattCast WHERE x IN tomCoStars]) AS mattCommonActors,
-Size([x IN johnCast WHERE x IN tomCoStars]) AS johnyCommonActors
-
+Size([x IN johnCast WHERE x IN tomCoStars]) AS johnyCommonActors"
+Which movie has a higher IMDb rating: the oldest film with the person who directed the most profitable comedy of the 1990s, or the newest film starring the person who directed the least profitable action movie of the 2000s?;"MATCH (d:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: ""Comedy""})
+WHERE m.year >= 1990 AND m.year < 2000 AND m.revenue IS NOT NULL
+WITH d,m ORDER BY m.revenue DESC LIMIT 1
+MATCH (d)-[:DIRECTED]->(m1:Movie)
+WITH d, m1
+ORDER BY m1.year ASC LIMIT 1
+WITH m1.title AS first_movie_of_director_with_highest_grossing_comedy, m1.imdbRating AS rating_first_movie_of_director_with_highest_grossing_comedy
+MATCH (d1:Person)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre {name: ""Action""})
+WHERE m.year >= 2000 AND m.year < 2010 AND m.revenue IS NOT NULL AND m.budget IS NOT NULL
+WITH first_movie_of_director_with_highest_grossing_comedy, rating_first_movie_of_director_with_highest_grossing_comedy,
+d1, m ORDER BY m.revenue - m.budget ASC LIMIT 1
+MATCH (d1)-[:DIRECTED]->(m1)
+RETURN first_movie_of_director_with_highest_grossing_comedy, rating_first_movie_of_director_with_highest_grossing_comedy,
+m1.title AS newest_movie_of_the_least_profitable_action,
+m1.imdbRating AS rating_newest_movie_of_the_least_profitable_action
+ORDER BY m1.year DESC LIMIT 1"
+Among the directors who have directed in at least five different genres, who directed movies with the greatest difference between their IMDb rating;"MATCH (d:Director)-[:DIRECTED]->(m:Movie)-[:IN_GENRE]->(g:Genre)
+WITH d, COUNT(DISTINCT g) AS genreCount
+WHERE genreCount >= 5
+WITH d
+MATCH (d)-[:DIRECTED]-(m)
+WHERE m.imdbRating IS NOT NULL
+RETURN d.name, min(m.imdbRating) AS min_rating, max(m.imdbRating) AS max_rating
+ORDER BY max - min DESC LIMIT 1
 "
-Which movie has a higher IMDb rating: the oldest film starring the person who directed the most profitable comedy of the 1990s, or the newest film starring the person who directed the least profitable action movie of the 2000s?;
-Among the directors who have directed in at least five different genres, who directed the movie with the greatest difference between its IMDb rating;
