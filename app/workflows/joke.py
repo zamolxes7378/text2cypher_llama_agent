@@ -17,11 +17,13 @@ from pydantic import UUID4, Field
 class JokeEvent(Event):
     uuid: UUID4 = Field(default_factory=uuid4)
     result: str
+    label: str
 
 
 class CritiqueEvent(Event):
     uuid: UUID4 = Field(default_factory=uuid4)
     result: str
+    label: str
 
 
 class JokeWorkflow(Workflow):
@@ -37,7 +39,7 @@ class JokeWorkflow(Workflow):
         response = await self.llm.acomplete(prompt)
 
         # Emit the joke event
-        joke_event = JokeEvent(result=str(response))
+        joke_event = JokeEvent(result=str(response), label="Joke")
         ctx.write_event_to_stream(joke_event)
 
         # Return for the next step
@@ -54,7 +56,7 @@ class JokeWorkflow(Workflow):
         )
 
         gen = await self.llm.astream_complete(prompt)
-        critique_event = CritiqueEvent(result="")
+        critique_event = CritiqueEvent(result="", label="Critique")
         async for response in gen:
             critique_event.result = response.delta
             ctx.write_event_to_stream(critique_event)

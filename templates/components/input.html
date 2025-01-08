@@ -88,7 +88,7 @@
             console.log("Createing new event message ...");
             message = createDivElement();
             message.classList = "message step";
-            message.innerHTML = `<span class="label">${data.event_type}:</span><br />`;
+            message.innerHTML = `<span class="label">${data.label}:</span><br />`;
             outputDiv.insertBefore(message, loader);
           }
           message.innerHTML += data.result;
