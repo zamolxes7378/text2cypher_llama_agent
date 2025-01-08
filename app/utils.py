@@ -38,6 +38,7 @@ async def run_workflow(workflow: str, context: dict):
                 {
                     "uuid": str(ev.uuid),
                     "event_type": type(ev).__name__,
+                    "label": ev.label,
                     "result": ev.result,
                 }
             )
