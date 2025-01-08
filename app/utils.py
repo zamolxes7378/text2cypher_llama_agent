@@ -42,6 +42,5 @@ async def run_workflow(workflow: str, context: dict):
                 }
             )
             yield f"data: {event_data}\n\n"
-        await asyncio.sleep(0.05)
 
     result = await handler

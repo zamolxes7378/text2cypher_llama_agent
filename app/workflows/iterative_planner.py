@@ -1,3 +1,4 @@
+import asyncio
 from typing import List
 
 from llama_index.core.workflow import (
@@ -221,5 +222,5 @@ class IterativePlanningFlow(Workflow):
         async for response in gen:
             final_event.result = response.delta
             ctx.write_event_to_stream(final_event)
-
+            await asyncio.sleep(0.05)
         return StopEvent(result=subqueries_cypher_history)

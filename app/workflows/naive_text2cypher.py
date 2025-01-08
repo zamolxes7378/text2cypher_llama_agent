@@ -1,3 +1,5 @@
+import asyncio
+
 from llama_index.core.workflow import (
     Context,
     Event,
@@ -71,6 +73,7 @@ class NaiveText2CypherFlow(Workflow):
             final_event.result = response.delta
             final_answer += response.delta
             ctx.write_event_to_stream(final_event)
+            await asyncio.sleep(0.05)
 
         stop_event = StopEvent(
             result={
