@@ -13,15 +13,19 @@ A collection of LlamaIndex Workflows-powered agents that convert natural languag
 
 ### Prerequisites
 
-1. Create a `.env` file based on `.env.example`
-2. Install `uv` package manager:
-```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+1. Create `.env` file based on `.env.example`
 ```
+cp .env.example .env
+```
+2. Edit `.env` and include your `OPENAI_API_KEY`.
 
 ### Installation
 
-Install dependencies:
+1. Install `uv` package manager:
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+2. Install dependencies:
 ```bash
 uv sync
 ```
