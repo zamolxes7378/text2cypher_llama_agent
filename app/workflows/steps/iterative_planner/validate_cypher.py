@@ -4,9 +4,9 @@ from llama_index.core import ChatPromptTemplate
 from neo4j.exceptions import CypherSyntaxError
 from pydantic import BaseModel, Field
 
-from app.workflows.utils import cypher_query_corrector, graph_store
+from app.workflows.shared import cypher_query_corrector, graph_store
 
-validate_cypher_system = """You are a specialized parser focused on analyzing Cypher query statements to extract node property filters. Your task is to identify and extract properties used in WHERE clauses and pattern matching conditions, but only when they contain explicit literal values.
+VALIDATE_CYPHER_SYSTEM_TEMPLATE = """You are a specialized parser focused on analyzing Cypher query statements to extract node property filters. Your task is to identify and extract properties used in WHERE clauses and pattern matching conditions, but only when they contain explicit literal values.
 
 For each Cypher statement, you should:
 
@@ -76,17 +76,7 @@ Example output 2:
 
 Note how property-to-property comparisons (f.salary = m.salary, m1.rating > m2.rating) are ignored in the output."""
 
-validate_cypher_user = """Cypher statement: {cypher}"""
-
-validate_cypher_msgs = [
-    (
-        "system",
-        validate_cypher_system,
-    ),
-    ("user", validate_cypher_user),
-]
-
-validate_cypher_prompt = ChatPromptTemplate.from_messages(validate_cypher_msgs)
+VALIDATE_CYPHER_USER_TEMPLATE = """Cypher statement: {cypher}"""
 
 
 class Property(BaseModel):
@@ -119,20 +109,29 @@ async def validate_cypher_step(llm, question, cypher):
     """
     errors = []
     mapping_errors = []
+
     # Check for syntax errors
     try:
         graph_store.structured_query(f"EXPLAIN {cypher}")
     except CypherSyntaxError as e:
         errors.append(e.message)
+
     # Experimental feature for correcting relationship directions
     corrected_cypher = cypher_query_corrector(cypher)
     if not corrected_cypher:
         errors.append("The generated Cypher statement doesn't fit the graph schema")
+
     # Use LLM for mapping for values
+    validate_cypher_msgs = [
+        ("system", VALIDATE_CYPHER_SYSTEM_TEMPLATE),
+        ("user", VALIDATE_CYPHER_USER_TEMPLATE),
+    ]
+    validate_cypher_prompt = ChatPromptTemplate.from_messages(validate_cypher_msgs)
     llm_output = await llm.as_structured_llm(ValidateCypherOutput).acomplete(
         validate_cypher_prompt.format(cypher=cypher)
     )
     llm_output = llm_output.raw
+
     if llm_output.filters:
         for filter in llm_output.filters:
             # Do mapping only for string values
@@ -161,6 +160,7 @@ async def validate_cypher_step(llm, question, cypher):
                     f"If you meant something else, please rephrase your question or verify the specific {filter.property_key} you're asking about. "
                     f"Would you like to try with a different {filter.property_key} value?"
                 )
+
     if mapping_errors:
         next_action = "end"
     elif errors:

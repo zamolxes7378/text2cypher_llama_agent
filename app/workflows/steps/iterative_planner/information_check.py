@@ -3,7 +3,7 @@ from typing import List, Optional
 from llama_index.core import ChatPromptTemplate
 from pydantic import BaseModel, Field
 
-information_check_system = """You are an expert assistant that evaluates whether a set of subqueries, their results, any existing condensed information, and the current query plan provide enough details to answer a given question. Your task is to:
+INFORMATION_CHECK_SYSTEM_TEMPLATE = """You are an expert assistant that evaluates whether a set of subqueries, their results, any existing condensed information, and the current query plan provide enough details to answer a given question. Your task is to:
 
 1. Analyze if the available information is sufficient to answer the original question: "{original_question}".
 2. Review the remaining steps in the query plan (if any) to determine if they:
@@ -58,25 +58,15 @@ information_check_system = """You are an expert assistant that evaluates whether
    - Explicitly document unsolvable tasks if critical information is missing.
 """
 
-information_check_user = """
-Subqueries and their results:  
-{subqueries}  
-Existing dynamic notebook:  
+INFORMATION_CHECK_USER_TEMPLATE = """
+Subqueries and their results:
+{subqueries}
+Existing dynamic notebook:
 {dynamic_notebook}
 Current remaining plan (if any):
 {plan}
-Original question: {question}  
+Original question: {question}
 """
-
-information_check_msgs = [
-    (
-        "system",
-        information_check_system,
-    ),
-    ("user", information_check_user),
-]
-
-information_check_prompt = ChatPromptTemplate.from_messages(information_check_msgs)
 
 
 class IFOutput(BaseModel):
@@ -122,7 +112,15 @@ def format_subqueries_for_prompt(information_checks: list) -> str:
 async def information_check_step(
     llm, subquery_events, original_question, dynamic_notebook, plan
 ):
+    information_check_msgs = [
+        ("system", INFORMATION_CHECK_SYSTEM_TEMPLATE),
+        ("user", INFORMATION_CHECK_USER_TEMPLATE),
+    ]
+
+    information_check_prompt = ChatPromptTemplate.from_messages(information_check_msgs)
+
     subqueries = format_subqueries_for_prompt(subquery_events)
+
     llm_output = await llm.as_structured_llm(IFOutput).acomplete(
         information_check_prompt.format(
             subqueries=subqueries,
@@ -132,6 +130,7 @@ async def information_check_step(
         )
     )
     llm_output = llm_output.raw
+
     return {
         "dynamic_notebook": llm_output.dynamic_notebook,
         "modified_plan": llm_output.modified_plan,

@@ -6,6 +6,13 @@ from llama_index.graph_stores.neo4j import (
 )
 from llama_index.llms.gemini import Gemini
 from llama_index.llms.openai import OpenAI
+from llama_index.core.workflow import Event
+
+
+class SseEvent(Event):
+    label: str
+    message: str
+
 
 graph_store = Neo4jPropertyGraphStore(
     username="recommendations",

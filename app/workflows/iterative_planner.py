@@ -1,5 +1,4 @@
 from typing import List
-
 from llama_index.core import VectorStoreIndex
 from llama_index.core.schema import TextNode
 from llama_index.core.workflow import (
@@ -10,10 +9,22 @@ from llama_index.core.workflow import (
     Workflow,
     step,
 )
-
-from app.workflows.frontend_events import SseEvent
-from app.workflows.iterative_planner_steps import *
-from app.workflows.utils import default_llm, embed_model, fewshot_examples, graph_store
+from app.workflows.shared import (
+    SseEvent,
+    default_llm,
+    embed_model,
+    fewshot_examples,
+    graph_store,
+)
+from app.workflows.steps.iterative_planner import (
+    guardrails_step,
+    initial_plan_step,
+    generate_cypher_step,
+    validate_cypher_step,
+    correct_cypher_step,
+    information_check_step,
+    get_final_answer_prompt,
+)
 
 MAX_INFORMATION_CHECKS = 3
 
@@ -226,6 +237,8 @@ class IterativePlanningFlow(Workflow):
     async def final_answer(self, ctx: Context, ev: FinalAnswer) -> StopEvent:
         original_question = await ctx.get("original_question")
         subqueries_cypher_history = await ctx.get("subqueries_cypher_history")
+        final_answer_prompt = get_final_answer_prompt()
+
         # wait until we receive all events
         gen = await self.llm.astream_chat(
             final_answer_prompt.format_messages(

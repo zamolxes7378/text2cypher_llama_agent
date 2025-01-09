@@ -1,6 +1,6 @@
 from llama_index.core import ChatPromptTemplate
 
-from app.workflows.utils import graph_store
+from app.workflows.shared import graph_store
 
 CORRECT_CYPHER_SYSTEM_TEMPLATE = """You are a Cypher expert reviewing a statement written by a junior developer.
 You need to correct the Cypher statement based on the provided errors. No pre-amble."

@@ -8,14 +8,18 @@ from llama_index.core.workflow import (
     Workflow,
     step,
 )
-
-from app.workflows.frontend_events import SseEvent
-from app.workflows.naive_text2cypher_steps import (
+from app.workflows.shared import (
+    SseEvent,
+    default_llm,
+    embed_model,
+    fewshot_examples,
+    graph_store,
+)
+from app.workflows.steps.naive_text2cypher import (
     correct_cypher_step,
     generate_cypher_step,
     get_naive_final_answer_prompt,
 )
-from app.workflows.utils import default_llm, embed_model, fewshot_examples, graph_store
 
 
 class SummarizeEvent(Event):

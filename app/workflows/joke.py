@@ -1,18 +1,13 @@
 import os
-from uuid import uuid4
-
 from llama_index.core.workflow import (
     Context,
-    Event,
     StartEvent,
     StopEvent,
     Workflow,
     step,
 )
 from llama_index.llms.openai import OpenAI
-from pydantic import UUID4, Field
-
-from app.workflows.frontend_events import SseEvent
+from app.workflows.shared import SseEvent
 
 
 class JokeWorkflow(Workflow):

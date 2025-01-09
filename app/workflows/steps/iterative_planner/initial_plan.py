@@ -18,7 +18,7 @@ class SubqueriesOutput(BaseModel):
     )
 
 
-subqueries_system = """You are a query planning optimizer. Your task is to break down complex questions into efficient, parallel-optimized retrieval steps. Focus ONLY on information retrieval queries, not analysis or reasoning steps.
+SUBQUERIES_SYSTEM_TEMPLATE = """You are a query planning optimizer. Your task is to break down complex questions into efficient, parallel-optimized retrieval steps. Focus ONLY on information retrieval queries, not analysis or reasoning steps.
 
 Key Requirements:
 - Group queries that can be executed in parallel into the same list
@@ -63,15 +63,19 @@ Remember:
 - Keep queries specific and self-contained
 - Prioritize independent queries first"""
 
-query_decompose_msgs = [("system", subqueries_system), ("user", "{question}")]
-
-subquery_template = ChatPromptTemplate.from_messages(query_decompose_msgs)
-
 
 async def initial_plan_step(llm, question):
+    query_decompose_msgs = [
+        ("system", SUBQUERIES_SYSTEM_TEMPLATE),
+        ("user", "{question}"),
+    ]
+
+    subquery_template = ChatPromptTemplate.from_messages(query_decompose_msgs)
+
     queries_output = await llm.as_structured_llm(SubqueriesOutput).acomplete(
         subquery_template.format(question=question)
     )
+
     return {
         "next_event": "generate_cypher",
         "arguments": {"plan": queries_output.raw.plan, "question": question},

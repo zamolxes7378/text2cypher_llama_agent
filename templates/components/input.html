@@ -2,19 +2,19 @@
   <hr />
   <textarea
     name="context"
-    placeholder="Enter string or context object..."
+    placeholder="Type your input topic..."
   ></textarea>
   <div class="row">
     <select name="workflow">
       {% for key in workflows %}
-      <option value="{{ key }}">{{ key.capitalize() }} workflow</option>
+      <option value="{{ key }}">{{ key|capitalize|replace('_', ' ') }}  workflow</option>
       {% endfor %}
     </select>
     <button type="submit">Run workflow ►</button>
   </div>
 </form>
 <script type="module">
-  import { SSE } from './static/sse.min.js';
+  import { SSE } from './static/sse.js';
 
   function createDivElement(classNames = "", content = "") {
     const element = document.createElement("div");
@@ -27,14 +27,13 @@
     const form = document.getElementById("input");
     const outputDiv = document.getElementById("output");
 
-    form.addEventListener("submit", async (event) => {
-      event.preventDefault(); // Prevent the default form submission
+    function submitForm(event) {
+      event.preventDefault();
 
-      // Prepare form data
       const formData = new FormData(form);
 
       const userMessage = createDivElement("message user");
-      userMessage.innerHTML = `<span class="label">Workflow input context:</span><br />`;
+      userMessage.innerHTML = `<span class="label">Workflow input:</span><br />`;
       userMessage.innerHTML += formData.get("context");
 
       const loader = createDivElement("loader", "");
@@ -56,8 +55,7 @@
       let lastEventLabel= "";
 
       sse.addEventListener('message', function(e) {
-        var data = JSON.parse(e.data);
-        console.log(data);
+        const data = JSON.parse(e.data);
 
         if (data.event_type) {
           // handle intermediate event steps message
@@ -83,81 +81,15 @@
         );
       });
 
+    }
+      form.addEventListener("submit", submitForm);
 
-      // const response = await fetch("/infer/", {
-      //   method: "POST",
-      //   body: formData,
-      // });
+      // Add keydown listener for Ctrl + Enter
+      form.addEventListener("keydown", function(event) {
+        if (event.key === 'Enter' && event.ctrlKey) {
+          submitForm(event);
+        }
+      });
 
-      // if (!response.ok) {
-      //   console.error("Network response was not ok");
-      //   return;
-      // }
-
-      // Check if the browser supports ReadableStream
-      // if (!response.body || !response.body.getReader) {
-      //   console.error("Streaming is not supported in this browser");
-      //   const text = await response.text();
-      //   outputDiv.textContent = text;
-      //   return;
-      // }
-
-      // Read and process the streaming response
-      // const reader = response.body.getReader();
-      // const decoder = new TextDecoder();
-
-      // let done = false;
-      // let message = null;
-      // let lastEventUuid = "";
-
-      // while (!done) {
-      //   const { value, done: doneReading } = await reader.read();
-
-      //   done = doneReading;
-
-      //   if (done) {
-      //     break;
-      //   }
-      //   // parse SSE data
-      //   const chunk = decoder.decode(value || new Uint8Array(), {
-      //     stream: !done,
-      //   });
-      //   const data = JSON.parse(chunk.replace("data: ", ""));
-
-      //   // render messages
-      //   // if (data.event_type) {
-      //   //   // handle intermediate event steps message
-      //   //   if (lastEventUuid !== data.uuid) {
-      //   //     console.log("Createing new event message ...");
-      //   //     message = createDivElement();
-      //   //     message.classList = "message step";
-      //   //     message.innerHTML = `<span class="label">${data.label}:</span><br />`;
-      //   //     outputDiv.insertBefore(message, loader);
-      //   //   }
-      //   //   message.innerHTML += data.result;
-      //   // } else {
-      //   //   // handle final result message
-      //   //   // if (lastEventUuid !== data.uuid) {
-      //   //   //   console.log("Createing final result ...");
-      //   //   //   message = createDivElement();
-      //   //   //   message.classList = "message result";
-      //   //   //   message.innerHTML = `<span class="label">Result:</span><br />`;
-      //   //   //   outputDiv.insertBefore(message, loader);
-      //   //   // }
-      //   //   // message.innerHTML += data.result;
-
-      //   //   loader.remove();
-      //   // }
-
-      //   // // store last event uuid
-      //   // lastEventUuid = data.uuid;
-
-      //   // // scroll to bottom on every chunk response
-      //   // outputDiv.parentElement.scrollTo(
-      //   //   0,
-      //   //   outputDiv.parentElement.scrollHeight
-      //   // );
-      // }
-    });
   });
 </script>

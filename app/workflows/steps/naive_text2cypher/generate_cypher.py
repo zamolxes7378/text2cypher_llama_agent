@@ -1,6 +1,6 @@
 from llama_index.core import ChatPromptTemplate
 
-from app.workflows.utils import graph_store
+from app.workflows.shared import graph_store
 
 GENERATE_SYSTEM_TEMPLATE = """Given an input question, convert it to a Cypher query. No pre-amble.
 Do not wrap the response in any backticks or anything else. Respond with a Cypher statement only!"""
@@ -33,4 +33,5 @@ async def generate_cypher_step(llm, subquery, fewshot_retriever):
             question=subquery, schema=schema, fewshot_examples=fewshot_examples
         )
     )
+
     return response.message.content
