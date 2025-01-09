@@ -1,3 +1,5 @@
+from llama_index.core import VectorStoreIndex
+from llama_index.core.schema import TextNode
 from llama_index.core.workflow import (
     Context,
     Event,
@@ -7,13 +9,13 @@ from llama_index.core.workflow import (
     step,
 )
 
-from app.workflows.frontend_events import StringEvent
+from app.workflows.frontend_events import SseEvent
 from app.workflows.naive_text2cypher_steps import (
     correct_cypher_step,
     generate_cypher_step,
-    naive_final_answer_prompt,
+    get_naive_final_answer_prompt,
 )
-from app.workflows.utils import default_llm, graph_store
+from app.workflows.utils import default_llm, embed_model, fewshot_examples, graph_store
 
 
 class SummarizeEvent(Event):
@@ -40,6 +42,17 @@ class NaiveText2CypherRetryFlow(Workflow):
         super().__init__(*args, **kwargs)  # Call the parent init
         self.llm = llm or default_llm  # Add child-specific logic
 
+        # Add fewshot in-memory vector db
+        few_shot_nodes = []
+        for example in fewshot_examples:
+            few_shot_nodes.append(
+                TextNode(
+                    text=f"{{'query':{example['query']}, 'question': {example['question']}))"
+                )
+            )
+        few_shot_index = VectorStoreIndex(few_shot_nodes, embed_model=embed_model)
+        self.few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
+
     @step
     async def generate_cypher(self, ctx: Context, ev: StartEvent) -> ExecuteCypherEvent:
         # Init global vars
@@ -47,11 +60,13 @@ class NaiveText2CypherRetryFlow(Workflow):
 
         question = ev.input
 
-        cypher_query = await generate_cypher_step(self.llm, question)
+        cypher_query = await generate_cypher_step(
+            self.llm, question, self.few_shot_retriever
+        )
 
         ctx.write_event_to_stream(
-            StringEvent(
-                result=f"Generated Cypher: {cypher_query}", label="Cypher generation"
+            SseEvent(
+                message=f"Generated Cypher: {cypher_query}", label="Cypher generation"
             )
         )
 
@@ -88,17 +103,18 @@ class NaiveText2CypherRetryFlow(Workflow):
 
     @step
     async def summarize_answer(self, ctx: Context, ev: SummarizeEvent) -> StopEvent:
+        naive_final_answer_prompt = get_naive_final_answer_prompt()
         gen = await self.llm.astream_chat(
             naive_final_answer_prompt.format_messages(
                 context=ev.context, question=ev.question, cypher_query=ev.cypher
             )
         )
-        final_event = StringEvent(result="", label="Final answer")
         final_answer = ""
         async for response in gen:
-            final_event.result = response.delta
             final_answer += response.delta
-            ctx.write_event_to_stream(final_event)
+            ctx.write_event_to_stream(
+                SseEvent(message=response.delta, label="Final answer")
+            )
 
         stop_event = StopEvent(
             result={

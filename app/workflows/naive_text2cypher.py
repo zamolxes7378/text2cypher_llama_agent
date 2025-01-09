@@ -1,3 +1,5 @@
+from llama_index.core import VectorStoreIndex
+from llama_index.core.schema import TextNode
 from llama_index.core.workflow import (
     Context,
     Event,
@@ -12,7 +14,7 @@ from app.workflows.naive_text2cypher_steps import (
     generate_cypher_step,
     get_naive_final_answer_prompt,
 )
-from app.workflows.utils import default_llm, graph_store
+from app.workflows.utils import default_llm, embed_model, fewshot_examples, graph_store
 
 
 class SummarizeEvent(Event):
@@ -31,11 +33,24 @@ class NaiveText2CypherFlow(Workflow):
         super().__init__(*args, **kwargs)  # Call the parent init
         self.llm = llm or default_llm  # Add child-specific logic
 
+        # Add fewshot in-memory vector db
+        few_shot_nodes = []
+        for example in fewshot_examples:
+            few_shot_nodes.append(
+                TextNode(
+                    text=f"{{'query':{example['query']}, 'question': {example['question']}))"
+                )
+            )
+        few_shot_index = VectorStoreIndex(few_shot_nodes, embed_model=embed_model)
+        self.few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
+
     @step
     async def generate_cypher(self, ctx: Context, ev: StartEvent) -> ExecuteCypherEvent:
         question = ev.input
 
-        cypher_query = await generate_cypher_step(self.llm, question)
+        cypher_query = await generate_cypher_step(
+            self.llm, question, self.few_shot_retriever
+        )
 
         ctx.write_event_to_stream(
             SseEvent(

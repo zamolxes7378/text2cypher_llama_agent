@@ -1,16 +1,15 @@
 import json
 from typing import Union
 
-from pydantic import BaseModel
-
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from pydantic import BaseModel
 
 from app.settings import WORKFLOW_MAP
-from app.utils import urlx_for, run_workflow
+from app.utils import run_workflow, urlx_for
 
 load_dotenv()
 

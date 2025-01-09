@@ -1,5 +1,7 @@
 from typing import List
 
+from llama_index.core import VectorStoreIndex
+from llama_index.core.schema import TextNode
 from llama_index.core.workflow import (
     Context,
     Event,
@@ -9,9 +11,9 @@ from llama_index.core.workflow import (
     step,
 )
 
-from app.workflows.frontend_events import StringEvent
+from app.workflows.frontend_events import SseEvent
 from app.workflows.iterative_planner_steps import *
-from app.workflows.utils import default_llm, graph_store
+from app.workflows.utils import default_llm, embed_model, fewshot_examples, graph_store
 
 MAX_INFORMATION_CHECKS = 3
 
@@ -55,6 +57,17 @@ class IterativePlanningFlow(Workflow):
         super().__init__(*args, **kwargs)  # Call the parent init
         self.llm = llm or default_llm  # Add child-specific logic
 
+        # Add fewshot in-memory vector db
+        few_shot_nodes = []
+        for example in fewshot_examples:
+            few_shot_nodes.append(
+                TextNode(
+                    text=f"{{'query':{example['query']}, 'question': {example['question']}))"
+                )
+            )
+        few_shot_index = VectorStoreIndex(few_shot_nodes, embed_model=embed_model)
+        self.few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
+
     @step
     async def start(self, ctx: Context, ev: StartEvent) -> InitialPlan | FinalAnswer:
         original_question = ev.input
@@ -82,7 +95,7 @@ class IterativePlanningFlow(Workflow):
         subqueries = initial_plan_output["arguments"].get("plan")
 
         ctx.write_event_to_stream(
-            StringEvent(result=f"Plan:{subqueries}", label="Planning")
+            SseEvent(message=f"Plan:{subqueries}", label="Planning")
         )
         await ctx.set(
             "information_checks", 0
@@ -101,7 +114,9 @@ class IterativePlanningFlow(Workflow):
     async def generate_cypher_step(
         self, ctx: Context, ev: GenerateCypher
     ) -> ValidateCypher:
-        generated_cypher = await generate_cypher_step(self.llm, ev.subquery)
+        generated_cypher = await generate_cypher_step(
+            self.llm, ev.subquery, self.few_shot_retriever
+        )
         return ValidateCypher(subquery=ev.subquery, generated_cypher=generated_cypher)
 
     @step(num_workers=4)
@@ -134,8 +149,8 @@ class IterativePlanningFlow(Workflow):
         self, ctx: Context, ev: ExecuteCypher
     ) -> InformationCheck:
         ctx.write_event_to_stream(
-            StringEvent(
-                result=f"Executing Cypher query: {ev.validated_cypher}",
+            SseEvent(
+                message=f"Executing Cypher query: {ev.validated_cypher}",
                 label="Cypher Execution",
             )
         )
@@ -191,8 +206,8 @@ class IterativePlanningFlow(Workflow):
         # Go fetch additional information if needed
         if data.get("modified_plan") and information_checks < MAX_INFORMATION_CHECKS:
             ctx.write_event_to_stream(
-                StringEvent(
-                    result=f"Modified plan: {data.get('modified_plan')}",
+                SseEvent(
+                    message=f"Modified plan: {data.get('modified_plan')}",
                     label="Modified plan",
                 )
             )
@@ -218,10 +233,10 @@ class IterativePlanningFlow(Workflow):
             )
         )
         final_answer = ""
-        final_event = StringEvent(result="", label="Final answer")
         async for response in gen:
-            final_event.result = response.delta
             final_answer += response.delta
-            ctx.write_event_to_stream(final_event)
+            ctx.write_event_to_stream(
+                SseEvent(message=response.delta, label="Final answer")
+            )
 
         return StopEvent(result=subqueries_cypher_history)
