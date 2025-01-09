@@ -217,9 +217,11 @@ class IterativePlanningFlow(Workflow):
                 context=ev.context, question=original_question
             )
         )
+        final_answer = ""
         final_event = StringEvent(result="", label="Final answer")
         async for response in gen:
             final_event.result = response.delta
+            final_answer += response.delta
             ctx.write_event_to_stream(final_event)
 
         return StopEvent(result=subqueries_cypher_history)
