@@ -1,5 +1,3 @@
-import asyncio
-
 from llama_index.core.workflow import (
     Context,
     Event,
@@ -9,10 +7,10 @@ from llama_index.core.workflow import (
     step,
 )
 
-from app.workflows.frontend_events import StringEvent
+from app.workflows.frontend_events import SseEvent
 from app.workflows.naive_text2cypher_steps import (
     generate_cypher_step,
-    naive_final_answer_prompt,
+    get_naive_final_answer_prompt,
 )
 from app.workflows.utils import default_llm, graph_store
 
@@ -40,8 +38,9 @@ class NaiveText2CypherFlow(Workflow):
         cypher_query = await generate_cypher_step(self.llm, question)
 
         ctx.write_event_to_stream(
-            StringEvent(
-                result=f"Generated Cypher: {cypher_query}", label="Cypher generation"
+            SseEvent(
+                label="Cypher generation",
+                message=f"Generated Cypher: {cypher_query}",
             )
         )
 
@@ -62,18 +61,21 @@ class NaiveText2CypherFlow(Workflow):
 
     @step
     async def summarize_answer(self, ctx: Context, ev: SummarizeEvent) -> StopEvent:
+        naive_final_answer_prompt = get_naive_final_answer_prompt()
         gen = await self.llm.astream_chat(
             naive_final_answer_prompt.format_messages(
                 context=ev.context, question=ev.question, cypher_query=ev.cypher
             )
         )
-        final_event = StringEvent(result="", label="Final answer")
         final_answer = ""
         async for response in gen:
-            final_event.result = response.delta
             final_answer += response.delta
-            ctx.write_event_to_stream(final_event)
-            await asyncio.sleep(0.05)
+            ctx.write_event_to_stream(
+                SseEvent(
+                    label="Final answer",
+                    message=response.delta,
+                )
+            )
 
         stop_event = StopEvent(
             result={

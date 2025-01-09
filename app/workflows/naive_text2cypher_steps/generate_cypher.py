@@ -1,7 +1,7 @@
 from llama_index.core import ChatPromptTemplate, VectorStoreIndex
 from llama_index.core.schema import TextNode
 
-from app.workflows.utils import embed_model, graph_store
+from app.workflows.utils import graph_store, embed_model
 
 examples = [
     {
@@ -38,24 +38,11 @@ examples = [
     },
 ]
 
-few_shot_nodes = []
-for line in examples:
-    few_shot_nodes.append(
-        TextNode(text=f"{{'query':{line['query']}, 'question': {line['question']}))")
-    )
 
-few_shot_index = VectorStoreIndex(few_shot_nodes, embed_model=embed_model)
-few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
-
-
-def get_fewshots(question):
-    return [el.text for el in few_shot_retriever.retrieve(question)]
-
-
-generate_system = """Given an input question, convert it to a Cypher query. No pre-amble.
+GENERATE_SYSTEM_TEMPLATE = """Given an input question, convert it to a Cypher query. No pre-amble.
 Do not wrap the response in any backticks or anything else. Respond with a Cypher statement only!"""
 
-generate_user = """You are a Neo4j expert. Given an input question, create a syntactically correct Cypher query to run.
+GENERATE_USER_TEMPLATE = """You are a Neo4j expert. Given an input question, create a syntactically correct Cypher query to run.
 Do not wrap the response in any backticks or anything else. Respond with a Cypher statement only!
 Here is the schema information
 {schema}
@@ -67,24 +54,34 @@ Below are a number of examples of questions and their corresponding Cypher queri
 User input: {question}
 Cypher query:"""
 
-generate_cypher_msgs = [
-    (
-        "system",
-        generate_system,
-    ),
-    ("user", generate_user),
-]
 
-text2cypher_prompt = ChatPromptTemplate.from_messages(generate_cypher_msgs)
+def _get_fewshots(question):
+    few_shot_nodes = []
+    for example in examples:
+        few_shot_nodes.append(
+            TextNode(
+                text=f"{{'query':{example['query']}, 'question': {example['question']}))"
+            )
+        )
+    few_shot_index = VectorStoreIndex(few_shot_nodes, embed_model=embed_model)
+    few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
 
-schema = graph_store.get_schema_str(exclude_types=["Actor", "Director"])
+    return [el.text for el in few_shot_retriever.retrieve(question)]
 
 
 async def generate_cypher_step(llm, subquery):
-    fewshot_examples = get_fewshots(subquery)
-    resp = await llm.achat(
+    schema = graph_store.get_schema_str(exclude_types=["Actor", "Director"])
+    fewshot_examples = _get_fewshots(subquery)
+
+    generate_cypher_msgs = [
+        ("system", GENERATE_SYSTEM_TEMPLATE),
+        ("user", GENERATE_USER_TEMPLATE),
+    ]
+    text2cypher_prompt = ChatPromptTemplate.from_messages(generate_cypher_msgs)
+
+    response = await llm.achat(
         text2cypher_prompt.format_messages(
             question=subquery, schema=schema, fewshot_examples=fewshot_examples
         )
     )
-    return resp.message.content
+    return response.message.content

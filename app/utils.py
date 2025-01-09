@@ -1,7 +1,8 @@
 import asyncio
 import json
-from typing import Any
+from typing import Any, Type
 from fastapi import Request
+from llama_index.core.workflow import Workflow
 from jinja2 import pass_context
 
 
@@ -32,19 +33,17 @@ async def run_workflow(workflow: str, context: dict):
 
     handler = workflow_instance.run(**context)
 
-    async for ev in handler.stream_events():
-        if type(ev).__name__ != "StopEvent":
+    async for event in handler.stream_events():
+        if type(event).__name__ != "StopEvent":
             event_data = json.dumps(
                 {
-                    "uuid": str(ev.uuid),
-                    "event_type": type(ev).__name__,
-                    "label": ev.label,
-                    "result": ev.result,
+                    "event_type": type(event).__name__,
+                    "label": event.label,
+                    "message": event.message,
                 }
             )
             yield f"data: {event_data}\n\n"
-            await asyncio.sleep(0.05)
 
     result = await handler
 
-    yield f"data: {json.dumps({'uuid': None, 'result': result})}\n\n"
+    yield f"data: {json.dumps({'result': result})}\n\n"

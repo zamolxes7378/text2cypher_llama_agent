@@ -1,4 +1,7 @@
 import json
+from typing import Union
+
+from pydantic import BaseModel
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Form, HTTPException, Request
@@ -27,16 +30,22 @@ async def get_index(request: Request):
     )
 
 
+class InferPayload(BaseModel):
+    workflow: str
+    context: str
+
+
 @app.post("/infer/")
-async def infer(request: Request):
-    form_data = await request.form()
-    workflow = form_data["workflow"]
-    context_input = form_data["context"]
+async def infer(payload: InferPayload):
+    workflow = payload.workflow
+    context_input = payload.context
 
     try:
         context = json.loads(context_input)
     except json.JSONDecodeError:
         context = {"input": context_input}
+
+    print("HERE context", context)
 
     return StreamingResponse(
         run_workflow(workflow=workflow, context=context),

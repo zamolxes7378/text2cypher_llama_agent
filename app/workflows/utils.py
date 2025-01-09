@@ -16,12 +16,7 @@ graph_store = Neo4jPropertyGraphStore(
     create_indexes=False,
     timeout=10,
 )
-"""
-llm = Gemini(
-    model="models/gemini-1.5-flash",
-    api_key=""
-)
-"""
+
 default_llm = OpenAI(model="gpt-4o-2024-11-20", temperature=0)
 
 embed_model = OpenAIEmbedding(model="text-embedding-3-small")
@@ -32,3 +27,10 @@ corrector_schema = [
     for el in graph_store.get_schema().get("relationships")
 ]
 cypher_query_corrector = CypherQueryCorrector(corrector_schema)
+
+"""
+llm = Gemini(
+    model="models/gemini-1.5-flash",
+    api_key=""
+)
+"""
