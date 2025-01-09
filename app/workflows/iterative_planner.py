@@ -151,7 +151,7 @@ class IterativePlanningFlow(Workflow):
         ctx.write_event_to_stream(
             SseEvent(
                 message=f"Executing Cypher query: {ev.validated_cypher}",
-                label="Cypher Execution",
+                label=f"Cypher Execution: {ev.subquery}",
             )
         )
         try:
