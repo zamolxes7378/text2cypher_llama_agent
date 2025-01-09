@@ -41,7 +41,7 @@
       outputDiv.append(userMessage);
       outputDiv.append(loader);
 
-      const sse = new SSE("/infer/", {
+      const sse = new SSE("/workflow/", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -51,6 +51,7 @@
           "context": formData.get('context'),
         }),
       });
+
       let message = null;
       let lastEventLabel= "";
 
@@ -58,9 +59,7 @@
         const data = JSON.parse(e.data);
 
         if (data.event_type) {
-          // handle intermediate event steps message
           if (lastEventLabel !== data.label) {
-            console.log("Createing new event message ...");
             message = createDivElement();
             message.classList = "message step";
             message.innerHTML = `<span class="label">${data.label}:</span><br />`;
@@ -80,16 +79,16 @@
           outputDiv.parentElement.scrollHeight
         );
       });
-
     }
-      form.addEventListener("submit", submitForm);
 
-      // Add keydown listener for Ctrl + Enter
-      form.addEventListener("keydown", function(event) {
-        if (event.key === 'Enter' && event.ctrlKey) {
-          submitForm(event);
-        }
-      });
+    form.addEventListener("submit", submitForm);
+
+    // Add keydown listener for Ctrl + Enter
+    form.addEventListener("keydown", function(event) {
+      if (event.key === 'Enter' && event.ctrlKey) {
+        submitForm(event);
+      }
+    });
 
   });
 </script>
