@@ -236,7 +236,6 @@ class IterativePlanningFlow(Workflow):
     @step
     async def final_answer(self, ctx: Context, ev: FinalAnswer) -> StopEvent:
         original_question = await ctx.get("original_question")
-        subqueries_cypher_history = await ctx.get("subqueries_cypher_history")
         final_answer_prompt = get_final_answer_prompt()
 
         # wait until we receive all events
@@ -252,4 +251,4 @@ class IterativePlanningFlow(Workflow):
                 SseEvent(message=response.delta, label="Final answer")
             )
 
-        return StopEvent(result=subqueries_cypher_history)
+        return StopEvent(result={"answer": final_answer, "question": original_question})
