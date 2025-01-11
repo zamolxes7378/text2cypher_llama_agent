@@ -13,6 +13,7 @@ class SubqueriesOutput(BaseModel):
         - Each group (inner list) contains queries that can be executed in parallel
         - Groups are ordered by dependency (earlier groups must be executed before later ones)
         - Each query must be a specific information retrieval request
+        - Split into multiple steps only if intermediate results return ≤25 values
         - No reasoning or comparison tasks, only data fetching queries"""
         )
     )
@@ -24,6 +25,7 @@ Key Requirements:
 - Group queries that can be executed in parallel into the same list
 - Order groups based on data dependencies
 - Include ONLY specific information retrieval queries
+- Split into multiple steps ONLY if intermediate query results return ≤25 distinct values
 - Exclude reasoning tasks, comparisons, or analysis steps
 - Prioritize queries that can be executed first and in parallel
 
@@ -32,33 +34,36 @@ For simple, directly answerable questions, return a single query in a single gro
 Example 1:
 User: "What was the impact of the 2008 financial crisis on Bank of America's stock price and employee count?"
 Assistant: [
-    # Group 1 - These can be fetched in parallel
+    # Group 1 - Single group since we're only looking at one company's metrics
     [
-        "What was Bank of America's stock price history from 2007 to 2009?",
-        "What was Bank of America's total employee count in 2007?",
-        "What was Bank of America's total employee count in 2009?"
+        "What was Bank of America's stock price history and employee count from 2007 to 2009?"
     ]
 ]
 
 Example 2:
 User: "Compare the performance of Tesla's Model 3 with BMW's competing models in terms of range and acceleration."
 Assistant: [
-    # Group 1 - Basic specs can be fetched in parallel
+    # Group 1 - Basic specs can be fetched in parallel, BMW has <25 competing models
     [
-        "What is the EPA range of the Tesla Model 3?",
-        "What is the 0-60 mph acceleration time of the Tesla Model 3?",
-        "What BMW models compete directly with the Tesla Model 3?"
-    ],
-    # Group 2 - Depends on knowing competing models from group 1
+        "What is the Tesla Model 3's EPA range and 0-60 mph acceleration time?",
+        "What are the EPA ranges and 0-60 mph acceleration times of BMW models competing with Tesla Model 3?"
+    ]
+]
+
+Example 3:
+User: "List the stock performance of all S&P 500 companies in 2022."
+Assistant: [
+    # Group 1 - Single query since result set would be >25 values
     [
-        "What is the EPA range of each identified BMW competitor model?",
-        "What is the 0-60 mph acceleration time of each identified BMW competitor model?"
+        "What was the stock performance of all S&P 500 companies in 2022?"
     ]
 ]
 
 Remember:
 - Focus on data retrieval only
-- Maximize parallel execution opportunities
+- Split into multiple steps only if intermediate results return ≤25 values
+- Keep queries combined if results would exceed 25 values
+- Maximize parallel execution opportunities when splitting is appropriate
 - Maintain necessary sequential ordering
 - Keep queries specific and self-contained
 - Prioritize independent queries first"""
