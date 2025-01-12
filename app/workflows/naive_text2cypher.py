@@ -71,7 +71,8 @@ class NaiveText2CypherFlow(Workflow):
         self, ctx: Context, ev: ExecuteCypherEvent
     ) -> SummarizeEvent:
         try:
-            database_output = str(graph_store.structured_query(ev.cypher))
+            # Hard limit to 100 records
+            database_output = str(graph_store.structured_query(ev.cypher)[:100])
         except Exception as e:
             database_output = str(e)
         return SummarizeEvent(
