@@ -19,7 +19,14 @@ Hosted web application is available [here](https://text2cypher-llama-agent.up.ra
 ```
 cp .env.example .env
 ```
-2. Edit `.env` and include your `OPENAI_API_KEY`.
+2. Edit `.env` and include your `OPENAI_API_KEY` (or at least one api key from available options).
+
+Available API key options:
+- `OPENAI_API_KEY`
+- `GOOGLE_API_KEY`
+- `ANTHROPIC_API_KEY`
+- `MISTRAL_API_KEY`
+- `DEEPSEEK_API_KEY`
 
 ### Installation
 
