@@ -1,10 +1,9 @@
-from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.graph_stores.neo4j import (
     CypherQueryCorrector,
     Neo4jPropertyGraphStore,
     Schema,
 )
-from llama_index.llms.gemini import Gemini
+from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
 from llama_index.core.workflow import Event
 
@@ -13,6 +12,10 @@ class SseEvent(Event):
     label: str
     message: str
 
+
+default_llm = OpenAI(model="gpt-4o-2024-11-20", temperature=0)
+
+embed_model = OpenAIEmbedding(model="text-embedding-3-small")
 
 graph_store = Neo4jPropertyGraphStore(
     username="recommendations",
@@ -24,9 +27,6 @@ graph_store = Neo4jPropertyGraphStore(
     timeout=10,
 )
 
-default_llm = OpenAI(model="gpt-4o-2024-11-20", temperature=0)
-
-embed_model = OpenAIEmbedding(model="text-embedding-3-small")
 
 # Cypher query corrector is experimental
 corrector_schema = [
@@ -34,13 +34,6 @@ corrector_schema = [
     for el in graph_store.get_schema().get("relationships")
 ]
 cypher_query_corrector = CypherQueryCorrector(corrector_schema)
-
-"""
-llm = Gemini(
-    model="models/gemini-1.5-flash",
-    api_key=""
-)
-"""
 
 fewshot_examples = [
     {

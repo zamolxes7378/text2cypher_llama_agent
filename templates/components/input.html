@@ -5,11 +5,18 @@
     placeholder="Ask your question..."
   ></textarea>
   <div class="row">
+    <div  class="row">
+    <select name="llm" class="select-llm">
+      {% for key in llms %}
+      <option value="{{ key }}">{{ key }}</option>
+      {% endfor %}
+    </select>
     <select name="workflow">
       {% for key in workflows %}
       <option value="{{ key }}">{{ key|capitalize|replace('_', ' ') }}  workflow</option>
       {% endfor %}
     </select>
+    </div>
     <button type="submit">Run workflow ►</button>
   </div>
 </form>
@@ -31,9 +38,10 @@
       event.preventDefault();
 
       const formData = new FormData(form);
+      const llm = formData.get("llm")
 
       const userMessage = createDivElement("message user");
-      userMessage.innerHTML = `<span class="label">Workflow input:</span><br />`;
+      userMessage.innerHTML = `<span class="label">Workflow input [${llm}]:</span><br />`;
       userMessage.innerHTML += formData.get("context");
 
       const loader = createDivElement("loader", "");
@@ -47,6 +55,7 @@
           'Content-Type': 'application/json'
         },
         payload: JSON.stringify({
+          "llm": llm,
           "workflow": formData.get('workflow'),
           "context": formData.get('context'),
         }),
@@ -62,10 +71,13 @@
           if (lastEventLabel !== data.label) {
             message = createDivElement();
             message.classList = "message step";
-            message.innerHTML = `<span class="label">${data.label}:</span><br />`;
+            message.innerHTML = `<span class="label">${data.label} [${llm}]:</span><br />`;
             outputDiv.insertBefore(message, loader);
           }
           message.innerHTML += data.message;
+          if(data.event_type === "error") {
+             loader.remove();
+          }
         } else {
           loader.remove();
         }
