@@ -1,5 +1,10 @@
 <div>
-    <p class="description">Workflow mechanics:</p>
+    <p>
+        Text2Cypher Llama Agents
+    </p>
+    <p>
+        A collection of LlamaIndex Workflows-powered agents that convert natural language to Cypher queries designed to retrieve information from a Neo4j database to answer the question.
+    </p>
     <details>
         <summary>Naive text2cypher flow</summary>
         <p>
@@ -33,6 +38,29 @@
         our approach after receiving feedback.
         </p>
     </details>
+
+    <details>
+        <summary>Naive text2cypher with retry and evaluation flow</summary>
+        <p>
+        Building on the naive text2cypher with retry flow, this enhanced version adds an
+        evaluation phase that checks if the query results are sufficient to answer the user's
+        question. If the results are deemed inadequate, the system sends the query back for
+        correction with information on how to improve it. If the results are acceptable, the flow
+        proceeds to the final summarization step. This extra layer of validation further bolsters the
+        resilience of the pipeline, ensuring that the user ultimately receives the most accurate and
+        complete answer possible.
+        </p>
+        <p>
+        The function evaluate_check is a simple check that determines whether the query results
+        adequately address the user's question. If the evaluation indicates the results are
+        insufficient and there are retry attempts remaining, it returns a CorrectCypherEventso the
+        query can be refined. Otherwise, it proceeds with a SummarizeEvent,indicating that the
+        results are suitable for final summarization.
+        </p>
+    </details>
+
+
+
     <details>
         <summary>Iterative planner flow</summary>
         <p>
