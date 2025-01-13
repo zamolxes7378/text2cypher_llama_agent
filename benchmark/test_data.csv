@@ -228,3 +228,13 @@ RETURN actor, avgProfit
 ORDER BY avgProfit DESC"
 How many science fiction movies are there?;"MATCH (n:Genre)<-[:IN_GENRE]-(:Movie) WHERE n.name = ""Sci-Fi"" RETURN count(*)
 "
+"Who made more movies in the 2000s, Tom Hanks or Tom Cruise, and for the winner find their highest profiting movie.
+";"MATCH (p:Person)-[:ACTED_IN]->(m:Movie) 
+WHERE p.name IN ['Tom Hanks', 'Tom Cruise'] AND m.year >= 2000 AND m.year < 2010 
+WITH p.name AS actor, COUNT(m) AS movieCount, COLLECT(m) AS movies 
+ORDER BY movieCount DESC 
+LIMIT 1 
+UNWIND movies AS movie 
+RETURN actor, movie.title AS highestProfitingMovie, movie.revenue 
+ORDER BY movie.revenue DESC 
+LIMIT 1"
