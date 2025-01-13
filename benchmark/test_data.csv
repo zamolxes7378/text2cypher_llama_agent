@@ -226,3 +226,5 @@ WHERE p.name IN ['Tom Hanks', 'Tom Cruise', 'Leonardo DiCaprio']
 WITH p.name AS actor, AVG(m.revenue - m.budget) AS avgProfit
 RETURN actor, avgProfit
 ORDER BY avgProfit DESC"
+How many science fiction movies are there?;"MATCH (n:Genre)<-[:IN_GENRE]-(:Movie) WHERE n.name = ""Sci-Fi"" RETURN count(*)
+"
