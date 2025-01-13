@@ -120,7 +120,9 @@ async def validate_cypher_step(llm, question, cypher):
     corrected_cypher = cypher_query_corrector(cypher)
     if not corrected_cypher:
         errors.append("The generated Cypher statement doesn't fit the graph schema")
-
+    
+    # Skip mapping the values to the database, LLMs struggle with this tool output
+    """
     # Use LLM for mapping for values
     validate_cypher_msgs = [
         ("system", VALIDATE_CYPHER_SYSTEM_TEMPLATE),
@@ -163,7 +165,8 @@ async def validate_cypher_step(llm, question, cypher):
 
     if mapping_errors:
         next_action = "end"
-    elif errors:
+    """
+    if errors:
         next_action = "correct_cypher"
     else:
         next_action = "execute_cypher"

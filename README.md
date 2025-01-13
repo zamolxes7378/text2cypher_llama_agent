@@ -2,6 +2,8 @@
 
 A collection of LlamaIndex Workflows-powered agents that convert natural language to Cypher queries designed to retrieve information from a Neo4j database to answer the question.
 
+Hosted web application is available [here](https://text2cypher-llama-agent.up.railway.app/).
+
 ## 🎯 Features
 
 - Multiple text2Cypher agents
