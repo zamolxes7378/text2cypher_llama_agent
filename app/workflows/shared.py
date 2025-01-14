@@ -1,11 +1,16 @@
+import os
+
+from dotenv import load_dotenv
+from llama_index.core.workflow import Event
+from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.graph_stores.neo4j import (
     CypherQueryCorrector,
     Neo4jPropertyGraphStore,
     Schema,
 )
-from llama_index.embeddings.openai import OpenAIEmbedding
 from llama_index.llms.openai import OpenAI
-from llama_index.core.workflow import Event
+
+load_dotenv()
 
 
 class SseEvent(Event):
@@ -16,12 +21,11 @@ class SseEvent(Event):
 default_llm = OpenAI(model="gpt-4o-2024-11-20", temperature=0)
 
 embed_model = OpenAIEmbedding(model="text-embedding-3-small")
-
 graph_store = Neo4jPropertyGraphStore(
-    username="recommendations",
-    password="recommendations",
-    database="recommendations",
-    url="neo4j+s://demo.neo4jlabs.com:7687",
+    username=os.getenv("NEO4J_USERNAME"),
+    password=os.getenv("NEO4J_PASSWORD"),
+    database=os.getenv("NEO4J_DATABASE"),
+    url=os.getenv("NEO4J_URI"),
     enhanced_schema=True,
     create_indexes=False,
     timeout=10,
