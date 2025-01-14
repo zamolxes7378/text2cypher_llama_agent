@@ -167,7 +167,6 @@ class IterativePlanningFlow(Workflow):
     async def correct_cypher_step(
         self, ctx: Context, ev: CorrectCypher
     ) -> ValidateCypher:
-        print(f"Correct: {ev}")
         ctx.write_event_to_stream(
             SseEvent(
                 message=f"Corecting Cypher query: {ev.cypher} due to error: {ev.errors}",
@@ -190,9 +189,9 @@ class IterativePlanningFlow(Workflow):
             )
         )
         try:
-            database_output = graph_store.structured_query(ev.validated_cypher)[
+            database_output = str(graph_store.structured_query(ev.validated_cypher)[
                 :100
-            ]  # Hard limit of 100 results
+            ])  # Hard limit of 100 results
         except Exception as e:  # Dividing by zero, etc... or timeout
             database_output = str(e)
 
