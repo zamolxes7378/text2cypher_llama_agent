@@ -1,4 +1,5 @@
 from typing import List
+
 from llama_index.core import VectorStoreIndex
 from llama_index.core.schema import TextNode
 from llama_index.core.workflow import (
@@ -9,6 +10,7 @@ from llama_index.core.workflow import (
     Workflow,
     step,
 )
+
 from app.workflows.shared import (
     SseEvent,
     default_llm,
@@ -17,16 +19,17 @@ from app.workflows.shared import (
     graph_store,
 )
 from app.workflows.steps.iterative_planner import (
-    guardrails_step,
-    initial_plan_step,
-    generate_cypher_step,
-    validate_cypher_step,
     correct_cypher_step,
-    information_check_step,
+    generate_cypher_step,
     get_final_answer_prompt,
+    guardrails_step,
+    information_check_step,
+    initial_plan_step,
+    validate_cypher_step,
 )
 
 MAX_INFORMATION_CHECKS = 3
+MAX_CORRECT_STEPS = 1
 
 
 class InitialPlan(Event):
@@ -35,17 +38,20 @@ class InitialPlan(Event):
 
 class GenerateCypher(Event):
     subquery: str
+    retries: int
 
 
 class ValidateCypher(Event):
     subquery: str
     generated_cypher: str
+    retries: int
 
 
 class CorrectCypher(Event):
     cypher: str
     subquery: str
     errors: List[str]
+    retries: int
 
 
 class ExecuteCypher(Event):
@@ -119,7 +125,7 @@ class IterativePlanningFlow(Workflow):
 
         # Send events in the current step of the plan
         for subquery in subqueries[0]:
-            ctx.send_event(GenerateCypher(subquery=subquery))
+            ctx.send_event(GenerateCypher(subquery=subquery, retries=MAX_CORRECT_STEPS))
 
     @step(num_workers=4)
     async def generate_cypher_step(
@@ -128,32 +134,50 @@ class IterativePlanningFlow(Workflow):
         generated_cypher = await generate_cypher_step(
             self.llm, ev.subquery, self.few_shot_retriever
         )
-        return ValidateCypher(subquery=ev.subquery, generated_cypher=generated_cypher)
+        return ValidateCypher(
+            subquery=ev.subquery, generated_cypher=generated_cypher, retries=ev.retries
+        )
 
     @step(num_workers=4)
     async def validate_cypher_step(
         self, ctx: Context, ev: ValidateCypher
-    ) -> FinalAnswer | ExecuteCypher | CorrectCypher:
+    ) -> ExecuteCypher | CorrectCypher:
         results = await validate_cypher_step(self.llm, ev.subquery, ev.generated_cypher)
-        if results["next_action"] == "end":  # DB value mapping
-            return FinalAnswer(context=str(results["mapping_errors"]))
+        # if results["next_action"] == "end":  # DB value mapping
+        #    return FinalAnswer(context=str(results["mapping_errors"]))
         if results["next_action"] == "execute_cypher":
             return ExecuteCypher(
                 subquery=ev.subquery, validated_cypher=ev.generated_cypher
             )
-        if results["next_action"] == "correct_cypher":
+        if results["next_action"] == "correct_cypher" and ev.retries > 0:
             return CorrectCypher(
                 subquery=ev.subquery,
                 cypher=ev.generated_cypher,
                 errors=results["cypher_errors"],
+                retries=ev.retries - 1,
+            )
+        else:  # What to do if no retries left
+            # We just run execute cypher and expect an error
+            # Improve
+            return ExecuteCypher(
+                subquery=ev.subquery, validated_cypher=ev.generated_cypher
             )
 
     @step(num_workers=4)
     async def correct_cypher_step(
         self, ctx: Context, ev: CorrectCypher
     ) -> ValidateCypher:
+        print(f"Correct: {ev}")
+        ctx.write_event_to_stream(
+            SseEvent(
+                message=f"Corecting Cypher query: {ev.cypher} due to error: {ev.errors}",
+                label=f"Cypher correction: {ev.subquery}",
+            )
+        )
         results = await correct_cypher_step(self.llm, ev.subquery, ev.cypher, ev.errors)
-        return ValidateCypher(subquery=ev.subquery, generated_cypher=results)
+        return ValidateCypher(
+            subquery=ev.subquery, generated_cypher=results, retries=ev.retries
+        )
 
     @step
     async def execute_cypher_step(
@@ -229,7 +253,9 @@ class IterativePlanningFlow(Workflow):
             await ctx.set("plan", data.get("modified_plan")[1:])
             await ctx.set("information_checks", information_checks + 1)
             for subquery in data["modified_plan"][0]:
-                ctx.send_event(GenerateCypher(subquery=subquery))
+                ctx.send_event(
+                    GenerateCypher(subquery=subquery, retries=MAX_CORRECT_STEPS)
+                )
         else:
             return FinalAnswer(context=data["dynamic_notebook"])
 
