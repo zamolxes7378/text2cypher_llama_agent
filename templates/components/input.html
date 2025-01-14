@@ -38,7 +38,12 @@
       event.preventDefault();
 
       const formData = new FormData(form);
-      const llm = formData.get("llm")
+      const llm = formData.get("llm");
+      const context = formData.get('context');
+
+      if(context.length === 0) {
+        return
+      }
 
       const userMessage = createDivElement("message user");
       userMessage.innerHTML = `<span class="label">Workflow input [${llm}]:</span><br />`;
@@ -57,7 +62,7 @@
         payload: JSON.stringify({
           "llm": llm,
           "workflow": formData.get('workflow'),
-          "context": formData.get('context'),
+          "context": context,
         }),
       });
 
