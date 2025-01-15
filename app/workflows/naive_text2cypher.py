@@ -75,6 +75,11 @@ class NaiveText2CypherFlow(Workflow):
             database_output = str(graph_store.structured_query(ev.cypher)[:100])
         except Exception as e:
             database_output = str(e)
+        ctx.write_event_to_stream(
+            SseEvent(
+                message=f"Database output: {database_output}", label="Database output"
+            )
+        )
         return SummarizeEvent(
             question=ev.question, cypher=ev.cypher, context=database_output
         )

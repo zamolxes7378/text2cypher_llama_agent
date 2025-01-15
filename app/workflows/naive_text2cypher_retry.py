@@ -68,13 +68,6 @@ class NaiveText2CypherRetryFlow(Workflow):
         cypher_query = await generate_cypher_step(
             self.llm, question, self.few_shot_retriever
         )
-
-        ctx.write_event_to_stream(
-            SseEvent(
-                message=f"Generated Cypher: {cypher_query}", label="Cypher generation"
-            )
-        )
-
         # Return for the next step
         return ExecuteCypherEvent(question=question, cypher=cypher_query)
 
@@ -84,6 +77,11 @@ class NaiveText2CypherRetryFlow(Workflow):
     ) -> SummarizeEvent | CorrectCypherEvent:
         # Get global var
         retries = await ctx.get("retries")
+        ctx.write_event_to_stream(
+            SseEvent(
+                message=f"Executing Cypher: {ev.cypher}", label="Cypher Execution"
+            )
+        )
         try:
             # Hard limit to 100 records
             database_output = str(graph_store.structured_query(ev.cypher)[:100])
@@ -109,12 +107,6 @@ class NaiveText2CypherRetryFlow(Workflow):
         self, ctx: Context, ev: CorrectCypherEvent
     ) -> ExecuteCypherEvent:
         NL = "/n"
-        ctx.write_event_to_stream(
-            SseEvent(
-                message=f"Cypher: {ev.cypher}{NL}Error: {ev.error}",
-                label="Cypher correction",
-            )
-        )
         results = await correct_cypher_step(self.llm, ev.question, ev.cypher, ev.error)
         return ExecuteCypherEvent(question=ev.question, cypher=results)
 

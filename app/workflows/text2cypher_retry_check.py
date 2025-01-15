@@ -75,13 +75,6 @@ class NaiveText2CypherRetryCheckFlow(Workflow):
         cypher_query = await generate_cypher_step(
             self.llm, question, self.few_shot_retriever
         )
-
-        ctx.write_event_to_stream(
-            SseEvent(
-                message=f"Generated Cypher: {cypher_query}", label="Cypher generation"
-            )
-        )
-
         # Return for the next step
         return ExecuteCypherEvent(question=question, cypher=cypher_query)
 
@@ -91,11 +84,22 @@ class NaiveText2CypherRetryCheckFlow(Workflow):
     ) -> EvaluateEvent | CorrectCypherEvent:
         # Get global var
         retries = await ctx.get("retries")
+
+        ctx.write_event_to_stream(
+            SseEvent(
+                message=f"Executing Cypher: {ev.cypher}", label="Cypher execution"
+            )
+        )
         try:
             # Hard limit to 100 records
             database_output = str(graph_store.structured_query(ev.cypher)[:100])
         except Exception as e:
             database_output = str(e)
+            ctx.write_event_to_stream(
+            SseEvent(
+                message=f"Cypher Execution error: {database_output}", label="Cypher execution error"
+            )
+        )
             # Retry
             if retries < self.max_retries:
                 await ctx.set("retries", retries + 1)
@@ -133,10 +137,9 @@ class NaiveText2CypherRetryCheckFlow(Workflow):
     async def correct_cypher_step(
         self, ctx: Context, ev: CorrectCypherEvent
     ) -> ExecuteCypherEvent:
-        NL = "/n"
         ctx.write_event_to_stream(
             SseEvent(
-                message=f"Cypher: {ev.cypher}{NL}Error: {ev.error}",
+                message=f"Error: {ev.error}",
                 label="Cypher correction",
             )
         )
