@@ -31,6 +31,62 @@ graph_store = Neo4jPropertyGraphStore(
     timeout=10,
 )
 
+if os.getenv("FEWSHOT_NEO4J_USERNAME"):
+    fewshot_graph_store = Neo4jPropertyGraphStore(
+        username=os.getenv("FEWSHOT_NEO4J_USERNAME"),
+        password=os.getenv("FEWSHOT_NEO4J_PASSWORD"),
+        url=os.getenv("FEWSHOT_NEO4J_URI"),
+        refresh_schema=False,
+        create_indexes=False,
+        timeout=10,
+    )
+else:
+    fewshot_graph_store = None
+
+
+def store_fewshot_example(question, cypher, llm):
+    if not fewshot_graph_store:
+        return
+    # Check if already exists
+    already_exists = fewshot_graph_store.structured_query(
+        "MATCH (f:Fewshot {question: $question}) RETURN True",
+        param_map={"question": question},
+    )
+    if already_exists:
+        return
+    # Calculate embedding
+    embedding = embed_model.get_text_embedding(question)
+    # Store response
+    fewshot_graph_store.structured_query(
+        """MERGE (f:Fewshot {question: $question}) 
+SET f.cypher = $cypher, f.llm = $llm, f.created = datetime() 
+WITH f 
+CALL db.create.setNodeVectorProperty(f,'embedding', $embedding)""",
+        param_map={
+            "question": question,
+            "cypher": cypher,
+            "embedding": embedding,
+            "llm": llm,
+        },
+    )
+    return
+
+
+def check_ok(text):
+    # Split the text into words
+    words = text.strip().split()
+
+    # Check if there are any words
+    if not words:
+        return False
+
+    # Check first and last words
+    first_word = words[0]
+    last_word = words[-1]
+
+    # Return True if either first or last word is "Ok." or "Ok,"
+    return first_word in ["Ok.", "Ok"] or last_word in ["Ok.", "Ok"]
+
 
 # Cypher query corrector is experimental
 corrector_schema = [

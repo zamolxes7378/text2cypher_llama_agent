@@ -11,10 +11,12 @@ from llama_index.core.workflow import (
 
 from app.workflows.shared import (
     SseEvent,
+    check_ok,
     default_llm,
     embed_model,
     fewshot_examples,
     graph_store,
+    store_fewshot_example,
 )
 from app.workflows.steps.naive_text2cypher import (
     correct_cypher_step,
@@ -28,6 +30,7 @@ class SummarizeEvent(Event):
     question: str
     cypher: str
     context: str
+    evaluation: str
 
 
 class ExecuteCypherEvent(Event):
@@ -86,9 +89,7 @@ class NaiveText2CypherRetryCheckFlow(Workflow):
         retries = await ctx.get("retries")
 
         ctx.write_event_to_stream(
-            SseEvent(
-                message=f"Executing Cypher: {ev.cypher}", label="Cypher execution"
-            )
+            SseEvent(message=f"Executing Cypher: {ev.cypher}", label="Cypher execution")
         )
         try:
             # Hard limit to 100 records
@@ -96,10 +97,11 @@ class NaiveText2CypherRetryCheckFlow(Workflow):
         except Exception as e:
             database_output = str(e)
             ctx.write_event_to_stream(
-            SseEvent(
-                message=f"Cypher Execution error: {database_output}", label="Cypher execution error"
+                SseEvent(
+                    message=f"Cypher Execution error: {database_output}",
+                    label="Cypher execution error",
+                )
             )
-        )
             # Retry
             if retries < self.max_retries:
                 await ctx.set("retries", retries + 1)
@@ -130,7 +132,10 @@ class NaiveText2CypherRetryCheckFlow(Workflow):
                 question=ev.question, cypher=ev.cypher, error=evaluation
             )
         return SummarizeEvent(
-            question=ev.question, cypher=ev.cypher, context=ev.context
+            question=ev.question,
+            cypher=ev.cypher,
+            context=ev.context,
+            evaluation=evaluation,
         )
 
     @step
@@ -148,6 +153,12 @@ class NaiveText2CypherRetryCheckFlow(Workflow):
 
     @step
     async def summarize_answer(self, ctx: Context, ev: SummarizeEvent) -> StopEvent:
+        retries = await ctx.get("retries")
+        # If retry was successful:
+        if retries > 0 and check_ok(ev.evaluation):
+            # print(f"Learned new example: {ev.question}, {ev.cypher}")
+            store_fewshot_example(ev.question, ev.cypher, self.llm.model)
+
         naive_final_answer_prompt = get_naive_final_answer_prompt()
         gen = await self.llm.astream_chat(
             naive_final_answer_prompt.format_messages(
