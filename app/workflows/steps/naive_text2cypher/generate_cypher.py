@@ -19,9 +19,12 @@ Cypher query:"""
 
 
 async def generate_cypher_step(llm, subquery, fewshot_retriever):
+    # Remove multilabeled nodes
     schema = graph_store.get_schema_str(exclude_types=["Actor", "Director"])
-    fewshot_examples = [el.text for el in fewshot_retriever.retrieve(subquery)]
-
+    try:
+        fewshot_examples = [el.text for el in fewshot_retriever.retrieve(subquery)] # LLamaIndex vector store
+    except:
+        fewshot_examples = [str(el) for el in fewshot_retriever(subquery)] # My custom fewshot implementation for auto-learning
     generate_cypher_msgs = [
         ("system", GENERATE_SYSTEM_TEMPLATE),
         ("user", GENERATE_USER_TEMPLATE),

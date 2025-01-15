@@ -44,13 +44,28 @@ else:
     fewshot_graph_store = None
 
 
+def retrieve_fewshots(question):
+    if not fewshot_graph_store:
+        return
+    embedding = embed_model.get_text_embedding(question)
+    examples = fewshot_graph_store.structured_query(
+        """MATCH (f:Fewshot)
+WITH f, vector.similarity.cosine(f.embedding, $embedding) AS score
+ORDER BY score DESC LIMIT 7
+RETURN f.question AS question, f.cypher AS cypher
+""",
+        param_map={"embedding": embedding},
+    )
+    return examples
+
+
 def store_fewshot_example(question, cypher, llm):
     if not fewshot_graph_store:
         return
     # Check if already exists
     already_exists = fewshot_graph_store.structured_query(
-        "MATCH (f:Fewshot {question: $question}) RETURN True",
-        param_map={"question": question},
+        "MATCH (f:Fewshot {id: $question + $llm}) RETURN True",
+        param_map={"question": question, 'llm':llm},
     )
     if already_exists:
         return
@@ -58,8 +73,8 @@ def store_fewshot_example(question, cypher, llm):
     embedding = embed_model.get_text_embedding(question)
     # Store response
     fewshot_graph_store.structured_query(
-        """MERGE (f:Fewshot {question: $question}) 
-SET f.cypher = $cypher, f.llm = $llm, f.created = datetime() 
+        """MERGE (f:Fewshot {id: $question + $llm}) 
+SET f.cypher = $cypher, f.llm = $llm, f.created = datetime(), f.question = $question
 WITH f 
 CALL db.create.setNodeVectorProperty(f,'embedding', $embedding)""",
         param_map={

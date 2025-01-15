@@ -10,11 +10,13 @@ from llama_index.core.workflow import (
 )
 
 from app.workflows.shared import (
+    retrieve_fewshots,
     SseEvent,
     check_ok,
     default_llm,
     embed_model,
     fewshot_examples,
+    fewshot_graph_store,
     graph_store,
     store_fewshot_example,
 )
@@ -56,17 +58,20 @@ class NaiveText2CypherRetryCheckFlow(Workflow):
     def __init__(self, llm=None, *args, **kwargs):
         super().__init__(*args, **kwargs)  # Call the parent init
         self.llm = llm or default_llm  # Add child-specific logic
-
-        # Add fewshot in-memory vector db
-        few_shot_nodes = []
-        for example in fewshot_examples:
-            few_shot_nodes.append(
-                TextNode(
-                    text=f"{{'query':{example['query']}, 'question': {example['question']}))"
+        # Fewshot graph store allows for self learning loop by storing new examples
+        if fewshot_graph_store:
+            self.few_shot_retriever = retrieve_fewshots
+        else:
+            # Add fewshot in-memory vector db
+            few_shot_nodes = []
+            for example in fewshot_examples:
+                few_shot_nodes.append(
+                    TextNode(
+                        text=f"{{'query':{example['query']}, 'question': {example['question']}))"
+                    )
                 )
-            )
-        few_shot_index = VectorStoreIndex(few_shot_nodes, embed_model=embed_model)
-        self.few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
+            few_shot_index = VectorStoreIndex(few_shot_nodes, embed_model=embed_model)
+            self.few_shot_retriever = few_shot_index.as_retriever(similarity_top_k=5)
 
     @step
     async def generate_cypher(self, ctx: Context, ev: StartEvent) -> ExecuteCypherEvent:
