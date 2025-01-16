@@ -59,12 +59,13 @@ RETURN f.question AS question, f.cypher AS cypher
     return examples
 
 
-def store_fewshot_example(question, cypher, llm):
+def store_fewshot_example(question, cypher, llm, success= True):
     if not fewshot_graph_store:
         return
+    label = "Fewshot" if success else "Missing"
     # Check if already exists
     already_exists = fewshot_graph_store.structured_query(
-        "MATCH (f:Fewshot {id: $question + $llm}) RETURN True",
+        f"MATCH (f:`{label}` {{id: $question + $llm}}) RETURN True",
         param_map={"question": question, 'llm':llm},
     )
     if already_exists:
@@ -73,7 +74,7 @@ def store_fewshot_example(question, cypher, llm):
     embedding = embed_model.get_text_embedding(question)
     # Store response
     fewshot_graph_store.structured_query(
-        """MERGE (f:Fewshot {id: $question + $llm}) 
+        f"""MERGE (f:`{label}` {{id: $question + $llm}}) 
 SET f.cypher = $cypher, f.llm = $llm, f.created = datetime(), f.question = $question
 WITH f 
 CALL db.create.setNodeVectorProperty(f,'embedding', $embedding)""",
