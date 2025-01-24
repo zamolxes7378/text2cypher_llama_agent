@@ -1,22 +1,27 @@
 import os
-from llama_index.embeddings.openai import OpenAIEmbedding
-from llama_index.llms.gemini import Gemini
-from llama_index.llms.openai import OpenAI
-from llama_index.llms.anthropic import Anthropic
-from llama_index.llms.mistralai import MistralAI
-from llama_index.llms.openai_like import OpenAILike
+
 from google.api_core import retry
+from llama_index.embeddings.openai import OpenAIEmbedding
+from llama_index.graph_stores.neo4j import Neo4jPropertyGraphStore, Schema
+from llama_index.llms.anthropic import Anthropic
+from llama_index.llms.gemini import Gemini
+from llama_index.llms.mistralai import MistralAI
+from llama_index.llms.openai import OpenAI
+from llama_index.llms.openai_like import OpenAILike
 
 
-class LlmUtils:
+class ResourceManager:
     llms = []
+    databases = {}
+    embed_model = None
 
     def __init__(self):
-        print("OPENAI_API_KEY:", os.getenv("OPENAI_API_KEY") is not None)
-        print("GOOGLE_API_KEY:", os.getenv("GOOGLE_API_KEY") is not None)
-        print("ANTHROPIC_API_KEY:", os.getenv("ANTHROPIC_API_KEY") is not None)
-        print("MISTRAL_API_KEY:", os.getenv("MISTRAL_API_KEY") is not None)
-        print("DEEPSEEK_API_KEY:", os.getenv("DEEPSEEK_API_KEY") is not None)
+        self.init_llms()
+        self.init_databases()
+        self.init_embed_model()
+
+    def init_llms(self):
+        print("> Initializing all llms. This may take some time...")
 
         if os.getenv("OPENAI_API_KEY"):
             self.llms.extend(
@@ -101,7 +106,7 @@ class LlmUtils:
             self.llms.extend(
                 [
                     (
-                        "deepsek-v3",
+                        "deepseek-v3",
                         OpenAILike(
                             model="deepseek-chat",
                             api_base="https://api.deepseek.com/beta",
@@ -113,8 +118,63 @@ class LlmUtils:
 
         print(f"Loaded {len(self.llms)} llms.")
 
+    def init_databases(self):
+        print("> Initializing all databases. This may take some time...")
+        demo_databases = os.getenv("NEO4J_DEMO_DATABASES")
+
+        if demo_databases != None:
+            demo_databases = demo_databases.split(",")
+            for db in demo_databases:
+                print(f"-> Initializing demo database: {db}")
+                try:
+                    graph_store = Neo4jPropertyGraphStore(
+                        url=os.getenv("NEO4J_URI"),
+                        username=db,
+                        password=db,
+                        database=db,
+                        enhanced_schema=True,
+                        create_indexes=False,
+                        timeout=30,
+                    )
+                    print(f"-> Getting corrector schema for {db} database.")
+                    corrector_schema = self.get_corrector_schema(graph_store)
+
+                    self.databases[db] = {
+                        "graph_store": graph_store,
+                        "corrector_schema": corrector_schema,
+                        "name": db,
+                    }
+                except Exception as ex:
+                    print(ex)
+
+        if os.getenv("NEO4J_DATABASE"):
+            self.databases["default"] = {
+                "uri": os.getenv("NEO4J_URI"),
+                "database": os.getenv("NEO4J_DATABASE"),
+                "username": os.getenv("NEO4J_USERNAME"),
+                "password": os.getenv("NEO4J_PASSWORD"),
+            }
+
+        print(f"Loaded {len(self.databases)} databases.")
+
+    def init_embed_model(self):
+        self.embed_model = OpenAIEmbedding(model="text-embedding-3-small")
+
     def get_model_by_name(self, name):
         for model_name, model in self.llms:
             if model_name == name:
                 return model
         return None
+
+    def get_database_by_name(self, name: str):
+        return self.databases[name]
+
+    def get_corrector_schema(
+        self, graph_store: Neo4jPropertyGraphStore
+    ) -> list[Schema]:
+        corrector_schema = [
+            Schema(el["start"], el["type"], el["end"])
+            for el in graph_store.get_schema().get("relationships")
+        ]
+
+        return corrector_schema
