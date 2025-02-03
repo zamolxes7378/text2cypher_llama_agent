@@ -6,7 +6,7 @@ from llama_index.core.workflow import (
     Workflow,
     step,
 )
-
+import re
 from workflows.shared.local_fewshot_manager import LocalFewshotManager
 from workflows.shared.sse_event import SseEvent
 from workflows.steps.naive_text2cypher import (
@@ -27,6 +27,14 @@ class ExecuteCypherEvent(Event):
     question: str
     cypher: str
 
+def extract_cypher_query(text):
+    match = re.search(r"<cypher>(.*?)</cypher>", text, re.DOTALL)
+    return match.group(1).strip() if match else None
+
+def extract_visualization_type(text):
+    match = re.search(r"<visualization>(.*?)</visualization>", text)
+    return match.group(1).strip() if match else None
+
 
 class BizDev(Workflow):
     def __init__(self, llm, db, embed_model, *args, **kwargs):
@@ -45,13 +53,15 @@ class BizDev(Workflow):
             question, self.db_name
         )
 
-        cypher_query = await generate_cypher_step(
+        output = await generate_cypher_step(
             self.llm,
             self.graph_store,
             question,
             fewshot_examples,
         )
-
+        cypher_query = extract_cypher_query(output)
+        visualization = extract_visualization_type(output)
+        print(cypher_query, visualization)
         ctx.write_event_to_stream(
             SseEvent(
                 label="Cypher generation",

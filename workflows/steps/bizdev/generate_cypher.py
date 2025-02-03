@@ -1,7 +1,18 @@
 from llama_index.core import ChatPromptTemplate
 
-GENERATE_SYSTEM_TEMPLATE = """Given an input question, convert it to a Cypher query. No pre-amble.
-Do not wrap the response in any backticks or anything else. Respond with a Cypher statement only!"""
+GENERATE_SYSTEM_TEMPLATE = """You are a Neo4j Cypher expert. Given an input question, generate a syntactically correct Cypher query that can be executed directly. Your response must strictly follow the format below:
+
+<cypher>Cypher statement</cypher>
+<visualization><"none" | "graph" | "table" | "chart"></visualization>
+
+- Do not include any explanations, preamble, or additional text.
+- Ensure the query matches the provided schema structure.
+- Choose the visualization type based on the nature of the query results:
+  - "graph" for node-edge relationships
+  - "table" for structured tabular data
+  - "chart" for aggregations or trends
+  - "none" if no visualization is needed
+- Do not wrap the response in backticks or any unnecessary formatting."""
 
 GENERATE_USER_TEMPLATE = """You are a Neo4j expert. Given an input question, create a syntactically correct Cypher query to run. Additionally, determine whether the output should be visualized, and if so, specify the visualization type (e.g., graph, table, chart). 
 
@@ -12,7 +23,7 @@ User input: {question}
 
 Response format:
 <cypher>Cypher statement</cypher>
-<visualization><"none" | "graph" | "table" | "chart"></visualization>"""
+<visualization>"none" | "graph" | "table" | "chart"</visualization>"""
 
 
 async def generate_cypher_step(llm, graph_store, subquery, fewshot_examples):
