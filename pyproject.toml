@@ -1,7 +1,7 @@
 [project]
-name = "easwee-net"
+name = "text2cypher_llama_agent"
 version = "4.0.0"
-description = "Easwee's digital playground"
+description = "text2cypher llama-index  workflows"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
