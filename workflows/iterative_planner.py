@@ -85,11 +85,11 @@ class IterativePlanningFlow(Workflow):
         )  # History of which queries were executed
 
         # LLM call
-        guardrails_output = await guardrails_step(self.llm, original_question)
-        if guardrails_output.get("next_event") == "generate_final_answer":
-            context = "The question is not about movies or cast, so I cannot answer the question"
-            final_answer = FinalAnswer(context=context)
-            return final_answer
+        # guardrails_output = await guardrails_step(self.llm, original_question)
+        # if guardrails_output.get("next_event") == "generate_final_answer":
+        #     context = "The question is not about movies or cast, so I cannot answer the question"
+        #     final_answer = FinalAnswer(context=context)
+        #     return final_answer
 
         return InitialPlan(question=original_question)
 
@@ -122,7 +122,7 @@ class IterativePlanningFlow(Workflow):
         ctx: Context,
         ev: GenerateCypher,
     ) -> ValidateCypher:
-        fewshot_examples = self.fewshot_retriever.get_fewshot_examples(
+        fewshot_examples = self.few_shot_retriever.get_fewshot_examples(
             ev.subquery, self.db_name
         )
 

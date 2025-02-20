@@ -72,16 +72,19 @@ async def run_workflow(llm: str, database: str, workflow: str, context: dict):
         workflow_class: Type[Workflow] = WORKFLOW_MAP.get(workflow)
         if not workflow_class:
             raise ValueError(f"Workflow '{workflow}' is not recognized.")
-
+        print(f"WORKFLOW CLASS SELECTED: {workflow_class}")
         selected_llm = resource_manager.get_model_by_name(llm)
         selected_database = resource_manager.get_database_by_name(database)
-
+        print(f"Selected LLM: {selected_llm}")
+        print(f"Selected Database: {selected_database}")
+        
         workflow_instance = workflow_class(
             llm=selected_llm,
             db=selected_database,
             embed_model=resource_manager.embed_model,
             timeout=60,
         )
+        print("WORKFLOW INSTANCE CREATED")
 
         handler = workflow_instance.run(**context)
 

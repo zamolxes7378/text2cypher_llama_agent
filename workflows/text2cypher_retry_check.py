@@ -46,14 +46,17 @@ class EvaluateEvent(Event):
 
 
 class NaiveText2CypherRetryCheckFlow(Workflow):
-    max_retries = 2
+    max_retries = 10
 
     def __init__(self, llm, db, embed_model, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        print(f"WORKFLOW INITIALIZING: {llm}, {db}, {embed_model}")
         self.llm = llm
         self.graph_store = db["graph_store"]
         self.embed_model = embed_model
         self.db_name = db["name"]
+        
+        print(f"WORKFLOW INITIALIZED: {self.llm}, {self.graph_store}, {self.embed_model}, {self.db_name}")
 
         # Fewshot graph store allows for self learning loop by storing new examples
         self.fewshot_manager = Neo4jFewshotManager()

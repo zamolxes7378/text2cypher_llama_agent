@@ -129,9 +129,9 @@ class ResourceManager:
                 try:
                     graph_store = Neo4jPropertyGraphStore(
                         url=os.getenv("NEO4J_URI"),
-                        username=db,
-                        password=db,
-                        database=db,
+                        username=os.getenv("NEO4J_USERNAME"),
+                        password=os.getenv("NEO4J_PASSWORD"),
+                        database=os.getenv("NEO4J_DATABASE"),
                         enhanced_schema=True,
                         create_indexes=False,
                         timeout=30,
